@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Nogomet – Dashboard</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;background:#0b0f14;color:#e6e9ef}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .grid{display:grid;gap:16px}
+    @media(min-width:800px){.grid-3{grid-template-columns:repeat(3,1fr)} .grid-2{grid-template-columns:repeat(2,1fr)}}
+    .card{background:#11161d;border:1px solid #1e2733;border-radius:14px;padding:16px}
+    .title{font-size:20px;font-weight:700;margin:0 0 8px}
+    .muted{color:#9aa7b5;font-size:13px}
+    .big{font-size:28px;font-weight:800}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #1e2733;text-align:left;font-size:14px}
+    th{color:#9aa7b5;font-weight:600}
+    .pill{background:#0f1720;border:1px solid #203142;border-radius:999px;padding:4px 10px;font-size:12px;color:#9bc1ff}
+    .ok{color:#8fffba}.bad{color:#ff9b9b}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="title">Ukupno u blagajni</div>
+      <div id="kitty" class="big">–</div>
+      <div id="monthLabel" class="muted"></div>
+    </div>
+    <div class="card">
+      <div class="title">Termini (ovaj mjesec)</div>
+      <div class="big"><span id="played">–</span>/<span id="fridays">–</span></div>
+      <div class="muted">Odigrano / mogućih petaka</div>
+    </div>
+    <div class="card">
+      <div class="title">Ishod (sezona)</div>
+      <div class="row">
+        <span>Crni pobjede</span><span id="blackWins" class="pill">–</span>
+      </div>
+      <div class="row">
+        <span>Bijeli pobjede</span><span id="whiteWins" class="pill">–</span>
+      </div>
+      <div class="row">
+        <span>Neriješeno</span><span id="draws" class="pill">–</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:16px">
+    <div class="card">
+      <div class="title">Dolaznost po igračima</div>
+      <canvas id="attChart" height="160"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">Pobjede / Porazi (top 10)</div>
+      <canvas id="wlChart" height="160"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="row">
+      <div class="title" style="margin:0">Master tablica</div>
+      <span id="updated" class="muted"></span>
+    </div>
+    <div style="overflow:auto">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th>
+            <th>Bodovi</th><th>Dolaznost</th><th>Mj. penal</th><th>Penali (K)</th><th>Uplata (I)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="title">Mjesečni obračuni</div>
+    <div id="months" class="grid grid-3"></div>
+  </div>
+
+</div>
+
+<script>
+https://script.google.com/macros/s/AKfycbzMsF1p0WzIHwEiEv-Vnq5h7tkDYK2fmg5XEWJiwq7aOCuP88VO6--dcpg2dvQXwSsb/exec
+
+async function loadData(){
+  const res = await fetch(WEB_APP_URL, {cache:"no-store"});
+  const data = await res.json();
+
+  // head cards
+  document.getElementById('kitty').textContent = (data.meta?.totals?.kitty ?? 0).toFixed(2) + " €";
+  document.getElementById('monthLabel').textContent = `Mjesec: ${data.meta?.month || "-"}`;
+  document.getElementById('played').textContent = data.meta?.totals?.matchesPlayed ?? "-";
+  document.getElementById('fridays').textContent = data.meta?.totals?.fridaysInMonth ?? "-";
+  document.getElementById('blackWins').textContent = data.meta?.totals?.blackWins ?? "-";
+  document.getElementById('whiteWins').textContent = data.meta?.totals?.whiteWins ?? "-";
+  document.getElementById('draws').textContent = data.meta?.totals?.draws ?? "-";
+  document.getElementById('updated').textContent = "Ažurirano: " + (data.meta?.generatedAt || "");
+
+  // table
+  const tb = document.querySelector("#tbl tbody");
+  tb.innerHTML = "";
+  (data.players||[]).forEach(p=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.name}</td>
+      <td>${p.played ?? 0}</td>
+      <td>${p.wins ?? 0}</td>
+      <td>${p.draws ?? 0}</td>
+      <td>${p.losses ?? 0}</td>
+      <td>${p.points ?? 0}</td>
+      <td>${(p.attendancePct??0).toFixed(1)}%</td>
+      <td>${p.monthlyPenalty ? "<span class='bad'>DA</span>":"<span class='ok'>NE</span>"}</td>
+      <td>${p.penaltyCount ?? 0}</td>
+      <td>${(p.amountTotal??0).toFixed(2)} €</td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  // months cards
+  const m = document.getElementById('months'); m.innerHTML="";
+  (data.months||[]).slice(-6).reverse().forEach(x=>{
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<div class="title">${x.month}</div>
+      <div class="big">${x.sum.toFixed(2)} €</div>
+      <div class="muted">Penalizirani: ${x.penalizedCount ?? 0}</div>`;
+    m.appendChild(div);
+  });
+
+  // charts
+  const top = [...(data.players||[])].sort((a,b)=>(b.attendancePct||0)-(a.attendancePct||0)).slice(0,12);
+  const attCtx = document.getElementById('attChart');
+  new Chart(attCtx, {
+    type:'bar',
+    data:{ labels: top.map(p=>p.name),
+      datasets:[{ label:'Dolaznost %', data: top.map(p=>+(p.attendancePct||0).toFixed(1)) }]},
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}}}
+  });
+
+  const wlTop = [...(data.players||[])].sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,10);
+  const wlCtx = document.getElementById('wlChart');
+  new Chart(wlCtx, {
+    type:'bar',
+    data:{ labels: wlTop.map(p=>p.name),
+      datasets:[
+        { label:'W', data: wlTop.map(p=>p.wins||0) },
+        { label:'L', data: wlTop.map(p=>p.losses||0) }
+      ]},
+    options:{ responsive:true, scales:{y:{beginAtZero:true}}, }
+  });
+}
+
+loadData().catch(console.error);
+</script>
+</body>
+</html>
