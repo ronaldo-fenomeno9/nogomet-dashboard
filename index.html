@@ -73,7 +73,7 @@
         <thead>
           <tr>
             <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th>
-            <th>Bodovi</th><th>Dolaznost</th><th>Mj. penal</th><th>Penali (K)</th><th>Uplata (I)</th>
+            <th>Bodovi</th><th>Dolaznost</th><th>Mj. penal</th><th>Uplata (I)</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -119,7 +119,6 @@ async function loadData(){
       <td>${p.points ?? 0}</td>
       <td>${(p.attendancePct??0).toFixed(1)}%</td>
       <td>${p.monthlyPenalty ? "<span class='bad'>DA</span>":"<span class='ok'>NE</span>"}</td>
-      <td>${p.penaltyCount ?? 0}</td>
       <td>${(p.amountTotal??0).toFixed(2)} €</td>
     `;
     tb.appendChild(tr);
@@ -161,3 +160,4 @@ loadData().catch(console.error);
 </script>
 </body>
 </html>
+
