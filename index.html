@@ -89,77 +89,78 @@
 </div>
 
 <script>
-https://script.google.com/macros/s/AKfycbzMsF1p0WzIHwEiEv-Vnq5h7tkDYK2fmg5XEWJiwq7aOCuP88VO6--dcpg2dvQXwSsb/exec
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzW0Ps8PRmLdcbrAi-VAlmUReOb19mfBw8kTZhn5dSZE0RS6FVhlbDxRAnWjihAgkLT/exec";
 
 async function loadData(){
-  const res = await fetch(WEB_APP_URL, {cache:"no-store"});
-  const data = await res.json();
+  try {
+    const res = await fetch(WEB_APP_URL, {cache:"no-store"});
+    const data = await res.json();
 
-  // head cards
-  document.getElementById('kitty').textContent = (data.meta?.totals?.kitty ?? 0).toFixed(2) + " €";
-  document.getElementById('monthLabel').textContent = `Mjesec: ${data.meta?.month || "-"}`;
-  document.getElementById('played').textContent = data.meta?.totals?.matchesPlayed ?? "-";
-  document.getElementById('fridays').textContent = data.meta?.totals?.fridaysInMonth ?? "-";
-  document.getElementById('blackWins').textContent = data.meta?.totals?.blackWins ?? "-";
-  document.getElementById('whiteWins').textContent = data.meta?.totals?.whiteWins ?? "-";
-  document.getElementById('draws').textContent = data.meta?.totals?.draws ?? "-";
-  document.getElementById('updated').textContent = "Ažurirano: " + (data.meta?.generatedAt || "");
+    document.getElementById('kitty').textContent = (data.meta?.totals?.kitty ?? 0).toFixed(2) + " €";
+    document.getElementById('monthLabel').textContent = `Mjesec: ${data.meta?.month || "-"}`;
+    document.getElementById('played').textContent = data.meta?.totals?.matchesPlayed ?? "-";
+    document.getElementById('fridays').textContent = data.meta?.totals?.fridaysInMonth ?? "-";
+    document.getElementById('blackWins').textContent = data.meta?.totals?.blackWins ?? "-";
+    document.getElementById('whiteWins').textContent = data.meta?.totals?.whiteWins ?? "-";
+    document.getElementById('draws').textContent = data.meta?.totals?.draws ?? "-";
+    document.getElementById('updated').textContent = "Ažurirano: " + (data.meta?.generatedAt || "");
 
-  // table
-  const tb = document.querySelector("#tbl tbody");
-  tb.innerHTML = "";
-  (data.players||[]).forEach(p=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${p.name}</td>
-      <td>${p.played ?? 0}</td>
-      <td>${p.wins ?? 0}</td>
-      <td>${p.draws ?? 0}</td>
-      <td>${p.losses ?? 0}</td>
-      <td>${p.points ?? 0}</td>
-      <td>${(p.attendancePct??0).toFixed(1)}%</td>
-      <td>${p.monthlyPenalty ? "<span class='bad'>DA</span>":"<span class='ok'>NE</span>"}</td>
-      <td>${p.penaltyCount ?? 0}</td>
-      <td>${(p.amountTotal??0).toFixed(2)} €</td>
-    `;
-    tb.appendChild(tr);
-  });
+    const tb = document.querySelector("#tbl tbody");
+    tb.innerHTML = "";
+    (data.players||[]).forEach(p=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p.name}</td>
+        <td>${p.played ?? 0}</td>
+        <td>${p.wins ?? 0}</td>
+        <td>${p.draws ?? 0}</td>
+        <td>${p.losses ?? 0}</td>
+        <td>${p.points ?? 0}</td>
+        <td>${(p.attendancePct??0).toFixed(1)}%</td>
+        <td>${p.monthlyPenalty ? "<span class='bad'>DA</span>":"<span class='ok'>NE</span>"}</td>
+        <td>${p.penaltyCount ?? 0}</td>
+        <td>${(p.amountTotal??0).toFixed(2)} €</td>
+      `;
+      tb.appendChild(tr);
+    });
 
-  // months cards
-  const m = document.getElementById('months'); m.innerHTML="";
-  (data.months||[]).slice(-6).reverse().forEach(x=>{
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `<div class="title">${x.month}</div>
-      <div class="big">${x.sum.toFixed(2)} €</div>
-      <div class="muted">Penalizirani: ${x.penalizedCount ?? 0}</div>`;
-    m.appendChild(div);
-  });
+    const m = document.getElementById('months'); 
+    m.innerHTML="";
+    (data.months||[]).slice(-6).reverse().forEach(x=>{
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `<div class="title">${x.month}</div>
+        <div class="big">${x.sum.toFixed(2)} €</div>
+        <div class="muted">Penalizirani: ${x.penalizedCount ?? 0}</div>`;
+      m.appendChild(div);
+    });
 
-  // charts
-  const top = [...(data.players||[])].sort((a,b)=>(b.attendancePct||0)-(a.attendancePct||0)).slice(0,12);
-  const attCtx = document.getElementById('attChart');
-  new Chart(attCtx, {
-    type:'bar',
-    data:{ labels: top.map(p=>p.name),
-      datasets:[{ label:'Dolaznost %', data: top.map(p=>+(p.attendancePct||0).toFixed(1)) }]},
-    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}}}
-  });
+    const top = [...(data.players||[])].sort((a,b)=>(b.attendancePct||0)-(a.attendancePct||0)).slice(0,12);
+    new Chart(document.getElementById('attChart'), {
+      type:'bar',
+      data:{ labels: top.map(p=>p.name),
+        datasets:[{ label:'Dolaznost %', data: top.map(p=>+(p.attendancePct||0).toFixed(1)) }]},
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}}}
+    });
 
-  const wlTop = [...(data.players||[])].sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,10);
-  const wlCtx = document.getElementById('wlChart');
-  new Chart(wlCtx, {
-    type:'bar',
-    data:{ labels: wlTop.map(p=>p.name),
-      datasets:[
-        { label:'W', data: wlTop.map(p=>p.wins||0) },
-        { label:'L', data: wlTop.map(p=>p.losses||0) }
-      ]},
-    options:{ responsive:true, scales:{y:{beginAtZero:true}}, }
-  });
+    const wlTop = [...(data.players||[])].sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,10);
+    new Chart(document.getElementById('wlChart'), {
+      type:'bar',
+      data:{ labels: wlTop.map(p=>p.name),
+        datasets:[
+          { label:'W', data: wlTop.map(p=>p.wins||0) },
+          { label:'L', data: wlTop.map(p=>p.losses||0) }
+        ]},
+      options:{ responsive:true, scales:{y:{beginAtZero:true}}, }
+    });
+
+  } catch(err){
+    console.error("Neuspješno učitavanje:", err);
+  }
 }
 
-loadData().catch(console.error);
+loadData();
 </script>
+
 </body>
 </html>
