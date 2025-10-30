@@ -22,23 +22,25 @@
     th{color:#9aa7b5;font-weight:600}
     .pill{background:#0f1720;border:1px solid #203142;border-radius:999px;padding:4px 10px;font-size:12px;color:#9bc1ff}
     .ok{color:#8fffba}.bad{color:#ff9b9b}
-    /* Timeline */
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+    /* timeline */
     .timeline{position:relative;margin-left:8px}
     .timeline:before{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:#1e2733;border-radius:2px}
     .t-item{position:relative;padding:10px 12px 10px 30px;margin:8px 0;border:1px solid #1e2733;background:#0f141b;border-radius:12px}
     .t-item:before{content:"";position:absolute;left:4px;top:16px;width:12px;height:12px;border-radius:50%;background:#2b3a4d;border:2px solid #89a7ff}
     .tag{display:inline-block;border:1px solid #2a3647;background:#0f1720;border-radius:8px;padding:2px 8px;margin-right:6px;font-size:12px;color:#a9c1ff}
+    .tag.link{cursor:pointer;text-decoration:underline}
     .winner{display:inline-block;border:1px solid #2d4a2d;background:#0e1710;color:#8fffba;border-radius:8px;padding:2px 8px;font-size:12px}
     .draw{display:inline-block;border:1px solid #49492d;background:#16170e;color:#ffe08a;border-radius:8px;padding:2px 8px;font-size:12px}
-    .loser{display:inline-block;border:1px solid #4a2d2d;background:#170e0e;color:#ff9b9b;border-radius:8px;padding:2px 8px;font-size:12px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
     .list{display:grid;gap:10px}
     .match{border:1px solid #1e2733;background:#0f141b;border-radius:12px;padding:12px}
     .teams{display:grid;gap:8px}
     @media(min-width:700px){.teams{grid-template-columns:1fr 1fr}}
     .flex{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
-    /* Sort + filter + modal */
+    /* sort + filter + modal */
     th.sortable { cursor:pointer; }
     th.sortable:hover { color:#fff; }
     th.sorted-asc::after { content:" ↑"; font-size:12px; }
@@ -49,16 +51,13 @@
       border-radius:8px; border:1px solid #1e2733;
       background:#0f141b; color:#e6e9ef; font-size:14px;
     }
+
     .modal-back { position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; z-index:10000; }
-    .modal { background:#11161d; border-radius:14px; padding:20px; max-width:600px; width:92%; border:1px solid #1e2733; }
-    .modal h2 { margin-top:0; }
-    .badges{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-    .badge{border:1px solid #2a3647;background:#0f1720;border-radius:999px;padding:4px 10px;font-size:12px;color:#9bc1ff}
-    .form{display:flex;gap:6px;margin:6px 0}
-    .dot{width:12px;height:12px;border-radius:50%}
-    .dot.win{background:#20c997}
-    .dot.draw{background:#ffd166}
-    .dot.loss{background:#ef476f}
+    .modal { background:#11161d; border-radius:14px; padding:20px; max-width:560px; width:92%; border:1px solid #1e2733; }
+    .modal h3 { margin-top:0; }
+    .close-btn{padding:6px 14px;background:#1e2733;color:#fff;border:0;border-radius:8px;cursor:pointer}
+    .list-players{display:grid;gap:8px;margin-top:8px}
+    .player-pill{border:1px solid #2a3647;background:#0f1720;border-radius:10px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center}
   </style>
 </head>
 <body>
@@ -118,7 +117,7 @@
         <thead>
           <tr>
             <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th>
-            <th>Bodovi</th><th>Dolaznost</th><th>Mj. penal</th><th>Uplata (I)</th>
+            <th>Bodovi</th><th>Dolaznost</th><th>Uplata (I)</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -143,82 +142,162 @@
 <script>
 const DATA_URL = "https://raw.githubusercontent.com/ronaldo-fenomeno9/nogomet-dashboard/main/data/data.json";
 
-// ---------- helpers ----------
+// helpers
 const norm = s => (s||"")
   .toString()
   .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g,"")   // skini dijakritiku (ćčžšđ -> cczsd)
+  .replace(/[\u0300-\u036f]/g,"")   // skini dijakritiku
   .replace(/[^\w\s\-]/g,"")         // makni čudne znakove
-  .replace(/\s+/g," ")              // višestruke razmake
+  .replace(/\s+/g," ")
   .trim()
   .toLowerCase();
 
-function mmName(ym) {
-  if (!ym) return "-";
-  const [y,m] = ym.split("-");
-  return `${m}/${y}`;
-}
-
+function euro(val){ return (val??0).toFixed(2)+' €'; }
 function td(val){ return (val??0); }
 function tdPct(val){ return (val??0).toFixed(1)+'%'; }
-function euro(val){ return (val??0).toFixed(2)+' €'; }
+function mmName(ym){ if(!ym) return "-"; const [y,m]=ym.split("-"); return `${m}/${y}`; }
 
-// ---------- ULTRA MODE: zadnjih 5 utakmica igrača ----------
-function last5ForPlayer(playerName, matches){
-  const key = norm(playerName);
-  // sortiraj po datumu (desc)
-  const ms = [...(matches||[])].sort((a,b)=> (a.date>b.date?-1:1));
+// izračun penaliziranih za mjesec (attendance < 50%)
+function penalizedForMonth(ym, matches, allPlayers){
+  const monthMatches = matches.filter(m => (m.date||"").slice(0,7) === ym);
+  const total = monthMatches.length;
+  if (total === 0) return [];
+
+  const played = new Map();
+  monthMatches.forEach(mt=>{
+    const all = (mt.black||[]).concat(mt.white||[]);
+    all.forEach(nm=>{
+      const k = norm(nm);
+      played.set(k, (played.get(k)||0)+1);
+    });
+  });
+
   const out = [];
-  for(const mt of ms){
-    const blacks = (mt.black||[]).map(norm);
-    const whites = (mt.white||[]).map(norm);
-    const win = (mt.winner||"").toLowerCase();
+  const baseline = allPlayers.length ? allPlayers : Array.from(played.keys()); // fallback
 
-    let playedSide = null;
-    if (blacks.includes(key)) playedSide = "crni";
-    else if (whites.includes(key)) playedSide = "bijeli";
-    else continue; // nije igrao ovu utakmicu
+  baseline.forEach(n=>{
+    const key = typeof n === "string" ? norm(n) : n;
+    const display = typeof n === "string" ? n : n; // već su imena
+    const count = played.get(key) || 0;
+    const att = count/total;
+    if (att < 0.5) out.push(display);
+  });
 
-    if (win === "neriješeno" || win === "neriješeno" || win === "neriješeno") {
-      out.push({type:"draw", date: mt.date, score: mt.score});
-    } else if (playedSide === win) {
-      out.push({type:"win", date: mt.date, score: mt.score});
-    } else {
-      out.push({type:"loss", date: mt.date, score: mt.score});
-    }
-    if (out.length>=5) break;
-  }
-  return out;
+  // sortiraj
+  return out.sort((a,b)=> a.localeCompare(b,'hr',{sensitivity:'base'}));
 }
 
-// ---------- build UI ----------
+// modal util
+function showModal(title, bodyHtml){
+  const back = document.createElement("div");
+  back.className = "modal-back";
+  back.innerHTML = `
+    <div class="modal">
+      <h3>${title}</h3>
+      <div>${bodyHtml}</div>
+      <div style="text-align:right;margin-top:14px">
+        <button class="close-btn">Zatvori</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(back);
+  back.querySelector(".close-btn").onclick = ()=> back.remove();
+  back.onclick = (e)=>{ if(e.target===back) back.remove(); };
+}
+
+// sortable
+let sortState = { col:null, dir:1 };
+function makeTableSortable() {
+  const ths = document.querySelectorAll("#tbl th");
+  ths.forEach((th, idx)=>{
+    th.classList.add("sortable");
+    th.onclick = ()=> sortTable(idx, th);
+  });
+}
+function sortTable(colIndex, thEl) {
+  const tbody = document.querySelector("#tbl tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  document.querySelectorAll("th").forEach(th=> th.classList.remove("sorted-asc","sorted-desc"));
+  if (sortState.col === colIndex) sortState.dir *= -1;
+  else { sortState.col = colIndex; sortState.dir = 1; }
+  const dir = sortState.dir;
+
+  rows.sort((a,b)=>{
+    const A = a.children[colIndex].innerText.toLowerCase();
+    const B = b.children[colIndex].innerText.toLowerCase();
+    const nA = parseFloat(A.replace(",","."));
+    const nB = parseFloat(B.replace(",","."));
+    if (!isNaN(nA) && !isNaN(nB)) return (nA - nB) * dir;
+    return A.localeCompare(B) * dir;
+  });
+  rows.forEach(r=> tbody.appendChild(r));
+  thEl.classList.add(dir===1 ? "sorted-asc" : "sorted-desc");
+}
+
+// filter
+function enablePlayerFilter() {
+  const input = document.getElementById("playerFilter");
+  input.oninput = ()=>{
+    const q = input.value.toLowerCase();
+    document.querySelectorAll("#tbl tbody tr").forEach(tr=>{
+      const name = tr.children[0].innerText.toLowerCase();
+      tr.style.display = name.includes(q) ? "" : "none";
+    });
+  };
+}
+
+// glavno učitavanje
 async function loadData(){
   const res = await fetch(DATA_URL + "?t=" + Date.now());
   const data = await res.json();
 
-  const seasonTotals = data.seasonTotals || {};
+  const matchesAll = Array.isArray(data.matches) ? data.matches : [];
   const months = Array.isArray(data.months) ? data.months : [];
-  const currentMonth = data.currentMonth || (months.length ? months[months.length-1].month : "-");
+  const players = Array.isArray(data.players) ? data.players : [];
+
+  // currentMonth
+  let currentMonth = data.currentMonth;
+  if (!currentMonth || !/^\d{4}-\d{2}$/.test(currentMonth)) {
+    if (months.length) currentMonth = months[months.length - 1].month;
+    else if (matchesAll.length) currentMonth = (matchesAll[matchesAll.length - 1].date || "").slice(0,7);
+  }
+
+  // sezona – izračun iz matches
+  const seasonPlayed = matchesAll.length;
+  const seasonFridays = months.reduce((a,m)=>a+(m.fridays||0),0);
+  const seasonCount = matchesAll.reduce((acc,m)=>{
+    const w = (m.winner||"").toLowerCase();
+    if (w==="crni") acc.black++;
+    else if (w==="bijeli") acc.white++;
+    else acc.draw++;
+    return acc;
+  },{black:0,white:0,draw:0});
 
   // head
-  document.getElementById('kitty').textContent = euro(seasonTotals.kitty ?? 0);
-  document.getElementById('seasonMeta').textContent = `Sezona: ${data.season || "-" } • Ažurirano: ${data.generatedAt || "-"}`;
+  // kitty: ako postoji data.kitty koristi; ako nema – zbroji iz mjeseci
+  const kitty = (typeof data.kitty === "number")
+    ? data.kitty
+    : months.reduce((a,m)=>a+(m.kitty||0),0);
 
-  document.getElementById('playedSeason').textContent  = td(seasonTotals.matchesPlayed);
-  document.getElementById('fridaysSeason').textContent = td(seasonTotals.fridays);
-  document.getElementById('blackWins').textContent = td(seasonTotals.blackWins);
-  document.getElementById('whiteWins').textContent = td(seasonTotals.whiteWins);
-  document.getElementById('draws').textContent = td(seasonTotals.draws);
+  document.getElementById('kitty').textContent = euro(kitty);
+  document.getElementById('seasonMeta').textContent =
+    `Sezona: ${data.season || "-"} • Ažurirano: ${data.generatedAt || ""}`;
+
+  document.getElementById('playedSeason').textContent  = seasonPlayed;
+  document.getElementById('fridaysSeason').textContent = seasonFridays;
+  document.getElementById('blackWins').textContent     = seasonCount.black;
+  document.getElementById('whiteWins').textContent     = seasonCount.white;
+  document.getElementById('draws').textContent         = seasonCount.draw;
 
   const mRec = months.find(m => m.month === currentMonth) || {};
   document.getElementById('playedMonth').textContent  = td(mRec.matchesPlayed);
   document.getElementById('fridaysMonth').textContent = td(mRec.fridays);
-  document.getElementById('updated').textContent = "Ažurirano: " + (data.generatedAt || "");
+  document.getElementById('updated').textContent      = "Ažurirano: " + (data.generatedAt || "");
 
   // table
   const tb = document.querySelector("#tbl tbody");
   tb.innerHTML = "";
-  (data.players||[]).forEach(p=>{
+  players.forEach(p=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="player-name">${p.name}</td>
@@ -228,24 +307,30 @@ async function loadData(){
       <td>${td(p.losses)}</td>
       <td>${td(p.points)}</td>
       <td>${tdPct(p.attendancePct)}</td>
-      <td>${(p.amountTotal??0)>0 ? "<span class='bad'>DA</span>":"<span class='ok'>NE</span>"}</td>
       <td>${euro(p.amountTotal)}</td>
     `;
     tb.appendChild(tr);
   });
 
-  // months timeline
+  // months timeline + klik na penalizirane
   const monthsWrap = document.getElementById('months');
   monthsWrap.innerHTML = "";
   months.slice().sort((a,b)=> (a.month>b.month?1:-1)).forEach(m=>{
     const div = document.createElement("div");
     div.className = "t-item";
+
+    // izračun penaliziranih na licu mjesta
+    const penalNames = penalizedForMonth(m.month, matchesAll, players.map(p=>p.name));
+    const penalCount = penalNames.length;
+
     const tags = `
       <span class="tag">${td(m.matchesPlayed)}/${td(m.fridays)} termina</span>
       <span class="tag">Crni ${td(m.blackWins)}</span>
       <span class="tag">Bijeli ${td(m.whiteWins)}</span>
       <span class="tag">Neriješeno ${td(m.draws)}</span>
-      <span class="tag">Penalizirani: ${td(m.penalized)}</span>
+      <span class="tag link" data-month="${m.month}" data-penals="${encodeURIComponent(JSON.stringify(penalNames))}">
+        Penalizirani: ${penalCount}
+      </span>
     `;
     div.innerHTML = `
       <div class="row" style="gap:8px">
@@ -257,8 +342,20 @@ async function loadData(){
     monthsWrap.appendChild(div);
   });
 
+  // click handler za penalizirane
+  monthsWrap.addEventListener("click", (e)=>{
+    const t = e.target.closest(".tag.link");
+    if (!t) return;
+    const ym = t.getAttribute("data-month");
+    const names = JSON.parse(decodeURIComponent(t.getAttribute("data-penals")||"[]"));
+    const list = names.length
+      ? `<div class="list-players">${names.map(n=>`<div class="player-pill"><span>${n}</span><span class="muted">dolaznost < 50%</span></div>`).join("")}</div>`
+      : `<div class="muted">Nema penaliziranih igrača za ovaj mjesec.</div>`;
+    showModal(`Penalizirani igrači – ${mmName(ym)}`, list);
+  });
+
   // charts
-  const topAtt = [...(data.players||[])].sort((a,b)=>(b.attendancePct||0)-(a.attendancePct||0)).slice(0,12);
+  const topAtt = [...players].sort((a,b)=>(b.attendancePct||0)-(a.attendancePct||0)).slice(0,12);
   new Chart(document.getElementById('attChart'), {
     type:'bar',
     data:{ labels: topAtt.map(p=>p.name),
@@ -266,7 +363,7 @@ async function loadData(){
     options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}}}
   });
 
-  const wlTop = [...(data.players||[])].sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,10);
+  const wlTop = [...players].sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,10);
   new Chart(document.getElementById('wlChart'), {
     type:'bar',
     data:{ labels: wlTop.map(p=>p.name),
@@ -274,13 +371,14 @@ async function loadData(){
         { label:'W', data: wlTop.map(p=>p.wins||0) },
         { label:'L', data: wlTop.map(p=>p.losses||0) }
       ]},
-    options:{ responsive:true, scales:{y:{beginAtZero:true}}, }
+    options:{ responsive:true, scales:{y:{beginAtZero:true}} }
   });
 
-  // matches (current month)
+  // matches – samo currentMonth
   const matchesWrap = document.getElementById('matches');
   matchesWrap.innerHTML = "";
-  (data.matches||[]).forEach(mt=>{
+  const monthMatches = matchesAll.filter(mt => (mt.date||"").slice(0,7) === currentMonth);
+  monthMatches.forEach(mt=>{
     const win = (mt.winner||"").toLowerCase();
     const badge = win==="crni" ? `<span class="winner">Pobjednik: Crni</span>` :
                   win==="bijeli" ? `<span class="winner">Pobjednik: Bijeli</span>` :
@@ -298,165 +396,9 @@ async function loadData(){
     matchesWrap.appendChild(div);
   });
 
-  // enable UX extras
+  // UX
   makeTableSortable();
   enablePlayerFilter();
-  enablePlayerModal(data);
-}
-
-// -------- sortable table --------
-let sortState = { col: null, dir: 1 };
-
-function makeTableSortable() {
-  const tbl = document.getElementById("tbl");
-  const ths = tbl.querySelectorAll("th");
-  ths.forEach((th, idx)=>{
-    th.classList.add("sortable");
-    th.onclick = ()=> sortTable(idx, th);
-  });
-}
-function sortTable(colIndex, thEl) {
-  const tbody = document.querySelector("#tbl tbody");
-  const rows = Array.from(tbody.querySelectorAll("tr"));
-
-  document.querySelectorAll("th").forEach(th=> th.classList.remove("sorted-asc", "sorted-desc"));
-
-  if (sortState.col === colIndex) sortState.dir *= -1;
-  else { sortState.col = colIndex; sortState.dir = 1; }
-
-  const dir = sortState.dir;
-
-  rows.sort((a,b)=>{
-    const A = a.children[colIndex].innerText.toLowerCase();
-    const B = b.children[colIndex].innerText.toLowerCase();
-    const nA = parseFloat(A.replace(",","."));
-    const nB = parseFloat(B.replace(",","."));
-    if (!isNaN(nA) && !isNaN(nB)) return (nA - nB) * dir;
-    return A.localeCompare(B) * dir;
-  });
-  rows.forEach(r=> tbody.appendChild(r));
-  thEl.classList.add(dir===1 ? "sorted-asc" : "sorted-desc");
-}
-
-// -------- player filter --------
-function enablePlayerFilter() {
-  const input = document.getElementById("playerFilter");
-  input.oninput = ()=>{
-    const q = input.value.toLowerCase();
-    document.querySelectorAll("#tbl tbody tr").forEach(tr=>{
-      const name = tr.children[0].innerText.toLowerCase();
-      tr.style.display = name.includes(q) ? "" : "none";
-    });
-  };
-}
-
-// -------- player modal (ULTRA) --------
-function enablePlayerModal(data) {
-  document.querySelectorAll("#tbl tbody tr td.player-name").forEach(td=>{
-    td.style.cursor = "pointer";
-    td.onclick = ()=> showProfile(td.innerText, data);
-  });
-}
-
-function showProfile(name, data) {
-  const player = (data.players||[]).find(p=>p.name===name);
-  if (!player) return;
-
-  // last 5 personal form (from matches — current month available in JSON)
-  const form = last5ForPlayer(name, data.matches||[]); // array of {type, date, score}
-
-  // derived metrics
-  const winRate = player.played>0 ? (player.wins/player.played*100) : 0;
-  const rating = Math.round( (winRate*0.6) + (Math.min(player.attendancePct,100)*0.4) ); // simple blended rating 0–100
-
-  // modal
-  const modal = document.createElement("div");
-  modal.className = "modal-back";
-  modal.innerHTML = `
-    <div class="modal">
-      <h2>${player.name}</h2>
-
-      <div class="badges">
-        ${player.attendancePct>=99 ? `<span class="badge">IRONMAN</span>` : ``}
-        ${winRate>=60 ? `<span class="badge">ROĐENI POBJEDNIK</span>` : ``}
-        ${(player.amountTotal??0)>=10 ? `<span class="badge">HARD WORKER</span>` : ``}
-        <span class="badge">Rating: ${rating}/100</span>
-      </div>
-
-      <div class="row">
-        <div><b>Utakmice:</b> ${player.played}</div>
-        <div><b>W/D/L:</b> ${player.wins}/${player.draws}/${player.losses}</div>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <div><b>Bodovi:</b> ${player.points}</div>
-        <div><b>Dolaznost:</b> ${player.attendancePct.toFixed(1)}%</div>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <div><b>Ukupno za uplatiti:</b> ${euro(player.amountTotal)}</div>
-      </div>
-
-      <hr style="border-color:#1e2733;margin:12px 0">
-
-      <div>
-        <div class="muted">Tvoja forma (zadnjih 5 osobnih utakmica)</div>
-        <div class="form" id="formDots"></div>
-      </div>
-
-      <hr style="border-color:#1e2733;margin:12px 0">
-
-      <p class="muted">Dolaznost – trend (po mjesecima)</p>
-      <canvas id="trendChart" height="110"></canvas>
-
-      <div style="text-align:right;margin-top:16px">
-        <button id="closeModal" style="padding:6px 14px;background:#1e2733;color:#fff;border:0;border-radius:8px;cursor:pointer">Zatvori</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  document.getElementById("closeModal").onclick = ()=> modal.remove();
-
-  // render form dots
-  const holder = modal.querySelector("#formDots");
-  if (form.length===0) {
-    holder.innerHTML = `<span class="muted">Nema odigranih utakmica u trenutnom mjesecu.</span>`;
-  } else {
-    form.forEach(f=>{
-      const d = document.createElement("div");
-      d.className = "dot " + (f.type==="win"?"win":f.type==="draw"?"draw":"loss");
-      d.title = `${f.date} · ${f.score} · ${f.type.toUpperCase()}`;
-      holder.appendChild(d);
-    });
-  }
-
-  // attendance trend by months (note: bazira se na dostupnim matches[] podacima)
-  const months = (data.months||[]).map(m=>m.month);
-  const playerKey = norm(player.name);
-
-  // izgradnja per-month attendance iz matches[] (koliko puta igrao u mjesecu / broj termina u mjesecu)
-  const playedByMonth = {};
-  const totalByMonth = {};
-  (data.matches||[]).forEach(mt=>{
-    const ym = (mt.date||"").slice(0,7);
-    totalByMonth[ym] = (totalByMonth[ym]||0)+1;
-    const blacks = (mt.black||[]).map(norm);
-    const whites = (mt.white||[]).map(norm);
-    if (blacks.includes(playerKey) || whites.includes(playerKey)) {
-      playedByMonth[ym] = (playedByMonth[ym]||0)+1;
-    }
-  });
-
-  const labels = months.length ? months : Object.keys(totalByMonth);
-  const attSeries = labels.map(m=>{
-    const t = totalByMonth[m]||0;
-    const p = playedByMonth[m]||0;
-    return t>0 ? +(p/t*100).toFixed(1) : null;
-  });
-
-  new Chart(modal.querySelector("#trendChart"), {
-    type:"line",
-    data:{ labels, datasets:[{ label:"Dolaznost %", data: attSeries, borderWidth:2 }] },
-    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, max:100}} }
-  });
 }
 
 loadData().catch(err=>{
