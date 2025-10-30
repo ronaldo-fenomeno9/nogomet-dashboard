@@ -22,7 +22,7 @@
     th{color:#9aa7b5;font-weight:600}
     .pill{background:#0f1720;border:1px solid #203142;border-radius:999px;padding:4px 10px;font-size:12px;color:#9bc1ff}
     .ok{color:#8fffba}.bad{color:#ff9b9b}
-    /* Timeline (style C) */
+    /* Timeline */
     .timeline{position:relative;margin-left:8px}
     .timeline:before{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:#1e2733;border-radius:2px}
     .t-item{position:relative;padding:10px 12px 10px 30px;margin:8px 0;border:1px solid #1e2733;background:#0f141b;border-radius:12px}
@@ -37,6 +37,28 @@
     .teams{display:grid;gap:8px}
     @media(min-width:700px){.teams{grid-template-columns:1fr 1fr}}
     .flex{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+    /* Sort + filter + modal */
+    th.sortable { cursor:pointer; }
+    th.sortable:hover { color:#fff; }
+    th.sorted-asc::after { content:" ↑"; font-size:12px; }
+    th.sorted-desc::after { content:" ↓"; font-size:12px; }
+
+    #playerFilter {
+      width:100%; padding:6px 10px; margin-bottom:12px;
+      border-radius:8px; border:1px solid #1e2733;
+      background:#0f141b; color:#e6e9ef; font-size:14px;
+    }
+    .modal-back { position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; z-index:10000; }
+    .modal { background:#11161d; border-radius:14px; padding:20px; max-width:600px; width:92%; border:1px solid #1e2733; }
+    .modal h2 { margin-top:0; }
+    .badges{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .badge{border:1px solid #2a3647;background:#0f1720;border-radius:999px;padding:4px 10px;font-size:12px;color:#9bc1ff}
+    .form{display:flex;gap:6px;margin:6px 0}
+    .dot{width:12px;height:12px;border-radius:50%}
+    .dot.win{background:#20c997}
+    .dot.draw{background:#ffd166}
+    .dot.loss{background:#ef476f}
   </style>
 </head>
 <body>
@@ -88,6 +110,9 @@
       <div class="title" style="margin:0">Master tablica</div>
       <span id="updated" class="muted"></span>
     </div>
+
+    <input id="playerFilter" type="text" placeholder="Pretraži igrače…">
+
     <div style="overflow:auto">
       <table id="tbl">
         <thead>
@@ -118,84 +143,121 @@
 <script>
 const DATA_URL = "https://raw.githubusercontent.com/ronaldo-fenomeno9/nogomet-dashboard/main/data/data.json";
 
+// ---------- helpers ----------
+const norm = s => (s||"")
+  .toString()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g,"")   // skini dijakritiku (ćčžšđ -> cczsd)
+  .replace(/[^\w\s\-]/g,"")         // makni čudne znakove
+  .replace(/\s+/g," ")              // višestruke razmake
+  .trim()
+  .toLowerCase();
+
 function mmName(ym) {
-  // "2025-10" -> "10/2025" (brzo i jasno)
   if (!ym) return "-";
   const [y,m] = ym.split("-");
   return `${m}/${y}`;
 }
 
+function td(val){ return (val??0); }
+function tdPct(val){ return (val??0).toFixed(1)+'%'; }
+function euro(val){ return (val??0).toFixed(2)+' €'; }
+
+// ---------- ULTRA MODE: zadnjih 5 utakmica igrača ----------
+function last5ForPlayer(playerName, matches){
+  const key = norm(playerName);
+  // sortiraj po datumu (desc)
+  const ms = [...(matches||[])].sort((a,b)=> (a.date>b.date?-1:1));
+  const out = [];
+  for(const mt of ms){
+    const blacks = (mt.black||[]).map(norm);
+    const whites = (mt.white||[]).map(norm);
+    const win = (mt.winner||"").toLowerCase();
+
+    let playedSide = null;
+    if (blacks.includes(key)) playedSide = "crni";
+    else if (whites.includes(key)) playedSide = "bijeli";
+    else continue; // nije igrao ovu utakmicu
+
+    if (win === "neriješeno" || win === "neriješeno" || win === "neriješeno") {
+      out.push({type:"draw", date: mt.date, score: mt.score});
+    } else if (playedSide === win) {
+      out.push({type:"win", date: mt.date, score: mt.score});
+    } else {
+      out.push({type:"loss", date: mt.date, score: mt.score});
+    }
+    if (out.length>=5) break;
+  }
+  return out;
+}
+
+// ---------- build UI ----------
 async function loadData(){
   const res = await fetch(DATA_URL + "?t=" + Date.now());
   const data = await res.json();
 
-  // ---- Meta & season totals ----
   const seasonTotals = data.seasonTotals || {};
   const months = Array.isArray(data.months) ? data.months : [];
   const currentMonth = data.currentMonth || (months.length ? months[months.length-1].month : "-");
 
-  document.getElementById('kitty').textContent = (seasonTotals.kitty ?? 0).toFixed(2) + " €";
+  // head
+  document.getElementById('kitty').textContent = euro(seasonTotals.kitty ?? 0);
   document.getElementById('seasonMeta').textContent = `Sezona: ${data.season || "-" } • Ažurirano: ${data.generatedAt || "-"}`;
 
-  document.getElementById('playedSeason').textContent  = seasonTotals.matchesPlayed ?? 0;
-  document.getElementById('fridaysSeason').textContent = seasonTotals.fridays ?? 0;
-  document.getElementById('blackWins').textContent = seasonTotals.blackWins ?? 0;
-  document.getElementById('whiteWins').textContent = seasonTotals.whiteWins ?? 0;
-  document.getElementById('draws').textContent = seasonTotals.draws ?? 0;
+  document.getElementById('playedSeason').textContent  = td(seasonTotals.matchesPlayed);
+  document.getElementById('fridaysSeason').textContent = td(seasonTotals.fridays);
+  document.getElementById('blackWins').textContent = td(seasonTotals.blackWins);
+  document.getElementById('whiteWins').textContent = td(seasonTotals.whiteWins);
+  document.getElementById('draws').textContent = td(seasonTotals.draws);
 
-  // current month block
   const mRec = months.find(m => m.month === currentMonth) || {};
-  document.getElementById('playedMonth').textContent  = mRec.matchesPlayed ?? 0;
-  document.getElementById('fridaysMonth').textContent = mRec.fridays ?? 0;
-
+  document.getElementById('playedMonth').textContent  = td(mRec.matchesPlayed);
+  document.getElementById('fridaysMonth').textContent = td(mRec.fridays);
   document.getElementById('updated').textContent = "Ažurirano: " + (data.generatedAt || "");
 
-  // ---- Players table ----
+  // table
   const tb = document.querySelector("#tbl tbody");
   tb.innerHTML = "";
-  (data.players || []).forEach(p=>{
+  (data.players||[]).forEach(p=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${p.name}</td>
-      <td>${p.played ?? 0}</td>
-      <td>${p.wins ?? 0}</td>
-      <td>${p.draws ?? 0}</td>
-      <td>${p.losses ?? 0}</td>
-      <td>${p.points ?? 0}</td>
-      <td>${(p.attendancePct??0).toFixed(1)}%</td>
+      <td class="player-name">${p.name}</td>
+      <td>${td(p.played)}</td>
+      <td>${td(p.wins)}</td>
+      <td>${td(p.draws)}</td>
+      <td>${td(p.losses)}</td>
+      <td>${td(p.points)}</td>
+      <td>${tdPct(p.attendancePct)}</td>
       <td>${(p.amountTotal??0)>0 ? "<span class='bad'>DA</span>":"<span class='ok'>NE</span>"}</td>
-      <td>${(p.amountTotal??0).toFixed(2)} €</td>
+      <td>${euro(p.amountTotal)}</td>
     `;
     tb.appendChild(tr);
   });
 
-  // ---- Months timeline (stil C) ----
+  // months timeline
   const monthsWrap = document.getElementById('months');
   monthsWrap.innerHTML = "";
-  months
-    .slice()            // kopija
-    .sort((a,b)=> (a.month > b.month ? 1 : -1)) // kronološki
-    .forEach(m=>{
-      const div = document.createElement("div");
-      div.className = "t-item";
-      const tags = `
-        <span class="tag">${(m.matchesPlayed??0)}/${(m.fridays??0)} termina</span>
-        <span class="tag">Crni ${m.blackWins??0}</span>
-        <span class="tag">Bijeli ${m.whiteWins??0}</span>
-        <span class="tag">Neriješeno ${m.draws??0}</span>
-        <span class="tag">Penalizirani: ${m.penalized ?? 0}</span>
-      `;
-      div.innerHTML = `
-        <div class="row" style="gap:8px">
-          <div class="title" style="margin:0">${mmName(m.month)}</div>
-          <div class="big">${(m.kitty??0).toFixed(2)} €</div>
-        </div>
-        <div class="flex" style="margin-top:6px">${tags}</div>
-      `;
-      monthsWrap.appendChild(div);
-    });
+  months.slice().sort((a,b)=> (a.month>b.month?1:-1)).forEach(m=>{
+    const div = document.createElement("div");
+    div.className = "t-item";
+    const tags = `
+      <span class="tag">${td(m.matchesPlayed)}/${td(m.fridays)} termina</span>
+      <span class="tag">Crni ${td(m.blackWins)}</span>
+      <span class="tag">Bijeli ${td(m.whiteWins)}</span>
+      <span class="tag">Neriješeno ${td(m.draws)}</span>
+      <span class="tag">Penalizirani: ${td(m.penalized)}</span>
+    `;
+    div.innerHTML = `
+      <div class="row" style="gap:8px">
+        <div class="title" style="margin:0">${mmName(m.month)}</div>
+        <div class="big">${euro(m.kitty)}</div>
+      </div>
+      <div class="flex" style="margin-top:6px">${tags}</div>
+    `;
+    monthsWrap.appendChild(div);
+  });
 
-  // ---- Charts ----
+  // charts
   const topAtt = [...(data.players||[])].sort((a,b)=>(b.attendancePct||0)-(a.attendancePct||0)).slice(0,12);
   new Chart(document.getElementById('attChart'), {
     type:'bar',
@@ -215,7 +277,7 @@ async function loadData(){
     options:{ responsive:true, scales:{y:{beginAtZero:true}}, }
   });
 
-  // ---- Matches (current month) ----
+  // matches (current month)
   const matchesWrap = document.getElementById('matches');
   matchesWrap.innerHTML = "";
   (data.matches||[]).forEach(mt=>{
@@ -234,6 +296,166 @@ async function loadData(){
       <div style="margin-top:8px">${badge}</div>
     `;
     matchesWrap.appendChild(div);
+  });
+
+  // enable UX extras
+  makeTableSortable();
+  enablePlayerFilter();
+  enablePlayerModal(data);
+}
+
+// -------- sortable table --------
+let sortState = { col: null, dir: 1 };
+
+function makeTableSortable() {
+  const tbl = document.getElementById("tbl");
+  const ths = tbl.querySelectorAll("th");
+  ths.forEach((th, idx)=>{
+    th.classList.add("sortable");
+    th.onclick = ()=> sortTable(idx, th);
+  });
+}
+function sortTable(colIndex, thEl) {
+  const tbody = document.querySelector("#tbl tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+
+  document.querySelectorAll("th").forEach(th=> th.classList.remove("sorted-asc", "sorted-desc"));
+
+  if (sortState.col === colIndex) sortState.dir *= -1;
+  else { sortState.col = colIndex; sortState.dir = 1; }
+
+  const dir = sortState.dir;
+
+  rows.sort((a,b)=>{
+    const A = a.children[colIndex].innerText.toLowerCase();
+    const B = b.children[colIndex].innerText.toLowerCase();
+    const nA = parseFloat(A.replace(",","."));
+    const nB = parseFloat(B.replace(",","."));
+    if (!isNaN(nA) && !isNaN(nB)) return (nA - nB) * dir;
+    return A.localeCompare(B) * dir;
+  });
+  rows.forEach(r=> tbody.appendChild(r));
+  thEl.classList.add(dir===1 ? "sorted-asc" : "sorted-desc");
+}
+
+// -------- player filter --------
+function enablePlayerFilter() {
+  const input = document.getElementById("playerFilter");
+  input.oninput = ()=>{
+    const q = input.value.toLowerCase();
+    document.querySelectorAll("#tbl tbody tr").forEach(tr=>{
+      const name = tr.children[0].innerText.toLowerCase();
+      tr.style.display = name.includes(q) ? "" : "none";
+    });
+  };
+}
+
+// -------- player modal (ULTRA) --------
+function enablePlayerModal(data) {
+  document.querySelectorAll("#tbl tbody tr td.player-name").forEach(td=>{
+    td.style.cursor = "pointer";
+    td.onclick = ()=> showProfile(td.innerText, data);
+  });
+}
+
+function showProfile(name, data) {
+  const player = (data.players||[]).find(p=>p.name===name);
+  if (!player) return;
+
+  // last 5 personal form (from matches — current month available in JSON)
+  const form = last5ForPlayer(name, data.matches||[]); // array of {type, date, score}
+
+  // derived metrics
+  const winRate = player.played>0 ? (player.wins/player.played*100) : 0;
+  const rating = Math.round( (winRate*0.6) + (Math.min(player.attendancePct,100)*0.4) ); // simple blended rating 0–100
+
+  // modal
+  const modal = document.createElement("div");
+  modal.className = "modal-back";
+  modal.innerHTML = `
+    <div class="modal">
+      <h2>${player.name}</h2>
+
+      <div class="badges">
+        ${player.attendancePct>=99 ? `<span class="badge">IRONMAN</span>` : ``}
+        ${winRate>=60 ? `<span class="badge">ROĐENI POBJEDNIK</span>` : ``}
+        ${(player.amountTotal??0)>=10 ? `<span class="badge">HARD WORKER</span>` : ``}
+        <span class="badge">Rating: ${rating}/100</span>
+      </div>
+
+      <div class="row">
+        <div><b>Utakmice:</b> ${player.played}</div>
+        <div><b>W/D/L:</b> ${player.wins}/${player.draws}/${player.losses}</div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <div><b>Bodovi:</b> ${player.points}</div>
+        <div><b>Dolaznost:</b> ${player.attendancePct.toFixed(1)}%</div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <div><b>Ukupno za uplatiti:</b> ${euro(player.amountTotal)}</div>
+      </div>
+
+      <hr style="border-color:#1e2733;margin:12px 0">
+
+      <div>
+        <div class="muted">Tvoja forma (zadnjih 5 osobnih utakmica)</div>
+        <div class="form" id="formDots"></div>
+      </div>
+
+      <hr style="border-color:#1e2733;margin:12px 0">
+
+      <p class="muted">Dolaznost – trend (po mjesecima)</p>
+      <canvas id="trendChart" height="110"></canvas>
+
+      <div style="text-align:right;margin-top:16px">
+        <button id="closeModal" style="padding:6px 14px;background:#1e2733;color:#fff;border:0;border-radius:8px;cursor:pointer">Zatvori</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById("closeModal").onclick = ()=> modal.remove();
+
+  // render form dots
+  const holder = modal.querySelector("#formDots");
+  if (form.length===0) {
+    holder.innerHTML = `<span class="muted">Nema odigranih utakmica u trenutnom mjesecu.</span>`;
+  } else {
+    form.forEach(f=>{
+      const d = document.createElement("div");
+      d.className = "dot " + (f.type==="win"?"win":f.type==="draw"?"draw":"loss");
+      d.title = `${f.date} · ${f.score} · ${f.type.toUpperCase()}`;
+      holder.appendChild(d);
+    });
+  }
+
+  // attendance trend by months (note: bazira se na dostupnim matches[] podacima)
+  const months = (data.months||[]).map(m=>m.month);
+  const playerKey = norm(player.name);
+
+  // izgradnja per-month attendance iz matches[] (koliko puta igrao u mjesecu / broj termina u mjesecu)
+  const playedByMonth = {};
+  const totalByMonth = {};
+  (data.matches||[]).forEach(mt=>{
+    const ym = (mt.date||"").slice(0,7);
+    totalByMonth[ym] = (totalByMonth[ym]||0)+1;
+    const blacks = (mt.black||[]).map(norm);
+    const whites = (mt.white||[]).map(norm);
+    if (blacks.includes(playerKey) || whites.includes(playerKey)) {
+      playedByMonth[ym] = (playedByMonth[ym]||0)+1;
+    }
+  });
+
+  const labels = months.length ? months : Object.keys(totalByMonth);
+  const attSeries = labels.map(m=>{
+    const t = totalByMonth[m]||0;
+    const p = playedByMonth[m]||0;
+    return t>0 ? +(p/t*100).toFixed(1) : null;
+  });
+
+  new Chart(modal.querySelector("#trendChart"), {
+    type:"line",
+    data:{ labels, datasets:[{ label:"Dolaznost %", data: attSeries, borderWidth:2 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, max:100}} }
   });
 }
 
