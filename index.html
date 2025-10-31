@@ -1,462 +1,335 @@
 <!doctype html>
 <html lang="hr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>nogomet HNB Savica — Dashboard</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    :root { color-scheme: dark; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial,sans-serif;background:#0b0f14;color:#e6e9ef}
-    a{color:#a9c6ff;text-decoration:none}
-    .wrap{max-width:1200px;margin:0 auto;padding:18px}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .brand{font-weight:800;font-size:20px;letter-spacing:.3px}
-    .muted{color:#9aa7b5}
-    .grid{display:grid;gap:16px}
-    @media(min-width:860px){.grid-3{grid-template-columns:repeat(3,1fr)} .grid-2{grid-template-columns:repeat(2,1fr)}}
-    .card{background:#0f141c;border:1px solid #1c2734;border-radius:14px;padding:16px}
-    .title{font-size:18px;font-weight:700;margin:0 0 8px}
-    .big{font-size:28px;font-weight:800}
-    .row{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 10px;border-bottom:1px solid #1c2734;text-align:left;font-size:14px}
-    th{color:#a7b1bd;font-weight:600}
-    .pill{border:1px solid #243449;background:#121a25;border-radius:999px;padding:4px 10px;font-size:12px}
-    .pill.ok{color:#8fffba;border-color:#2c5344}
-    .pill.warn{color:#ffd599;border-color:#5b4a26}
-    .pill.bad{color:#ff9b9b;border-color:#5b3030}
-    .badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
-    .b-win{background:#11301f;color:#86ffba;border:1px solid #1f5033}
-    .b-draw{background:#282c36;color:#cfe1ff;border:1px solid #3c4a62}
-    .b-loss{background:#341a1a;color:#ffb1b1;border:1px solid #5a2d2d}
-    .search{width:100%;padding:10px;border-radius:10px;border:1px solid #1c2734;background:#0b1118;color:#e6e9ef}
-    .kicker{font-size:12px;color:#8fa0b3;margin-left:8px}
-    .chip{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #263245;background:#101823;color:#cfe1ff;font-size:12px;margin-right:6px}
-    .month-card{cursor:pointer}
-    .month-details{display:none;margin-top:12px}
-    .match{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed #1e2b3a}
-    .team{font-size:12px;color:#9fb0c3}
-    .score{font-weight:800}
-    .form-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
-    .dot-w{background:#86ffba}.dot-d{background:#cfe1ff}.dot-l{background:#ff9b9b}
-    .modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:16px}
-    .modal .content{max-width:720px;width:100%;background:#0f141c;border:1px solid #1c2734;border-radius:12px;padding:16px}
-    .close{float:right;cursor:pointer;font-weight:700;color:#9aa7b5}
-    .subtitle{color:#9aa7b5;font-size:13px;margin:2px 0 12px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nogomet HNB Savica — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#0f1720; --panel:#121a24; --muted:#8aa0b2; --text:#e6eef6; --accent:#3dd6ff;
+  --win:#22c55e; --draw:#eab308; --loss:#ef4444; --card:#101823; --chip:#1b2633;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto}
+a{color:inherit}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.logo{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#38bdf8,#0ea5e9)}
+h1{font-size:20px;margin:0}
+.grid{display:grid;gap:16px}
+@media(min-width:900px){.grid-cols-3{grid-template-columns:repeat(3,1fr)} .grid-cols-2{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--panel);border:1px solid #1e2a38;border-radius:14px;padding:16px}
+.card h2{font-size:16px;margin:0 0 12px 0;color:#cce1f1}
+.kpis{display:grid;gap:12px}
+.kpi{background:var(--card);border:1px solid #1e2a38;border-radius:14px;padding:14px}
+.kpi .title{color:var(--muted);font-size:12px;margin-bottom:6px}
+.kpi .value{font-weight:700;font-size:24px}
+.list{display:flex;flex-direction:column;gap:10px}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:#cfe4f3;border:1px solid #223141;border-radius:999px;padding:4px 10px;font-size:12px}
+.flex{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:10px 8px;border-bottom:1px solid #1f2a36;font-size:14px}
+.table th{color:#9fb4c6;text-align:left;font-weight:600}
+.form-strip{display:flex;gap:6px}
+.form-dot{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#0b1220}
+.form-dot.win{background:var(--win)}
+.form-dot.draw{background:var(--draw)}
+.form-dot.loss{background:var(--loss)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.section-title{font-size:16px;font-weight:700;margin:8px 0 12px}
+.footer{opacity:.6;text-align:center;padding:20px}
+.btn{background:#1a2430;border:1px solid #273447;color:#d6e6f5;border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer}
+.btn:hover{filter:brightness(1.1)}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:50}
+.modal .dialog{width:min(100%,980px);background:var(--panel);border:1px solid #1f2a36;border-radius:14px;overflow:hidden}
+.modal .bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#101723;border-bottom:1px solid #1f2a36}
+.modal .content{padding:16px}
+.close{background:transparent;border:0;color:#9fb4c6;font-size:16px;cursor:pointer}
+.small{font-size:12px;color:#89a1b4}
+</style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">nogomet HNB Savica</div>
-    <div class="muted">live dashboard</div>
-  </header>
+<div class="container">
 
-  <!-- HEAD CARDS -->
-  <div class="grid grid-3">
-    <div class="card">
-      <div class="title">Ukupno u blagajni</div>
-      <div id="kitty" class="big">–</div>
-      <div id="updated" class="muted"></div>
+  <div class="header">
+    <div class="logo"></div>
+    <div>
+      <h1>Nogomet HNB Savica — Dashboard</h1>
+      <div class="small" id="updated"></div>
     </div>
-    <div class="card">
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-3 kpis">
+    <div class="kpi">
+      <div class="title">Ukupno u blagajni (sezona)</div>
+      <div class="value" id="kpi-kitty">0.00 €</div>
+      <div class="small" id="season"></div>
+    </div>
+    <div class="kpi">
       <div class="title">Termini (kumulativ)</div>
-      <div class="big"><span id="played">–</span>/<span id="fridays">–</span></div>
-      <div class="muted">Odigrano / mogućih petaka</div>
+      <div class="value" id="kpi-terms">0/0</div>
+      <div class="small">Odigrano / mogućih petaka</div>
     </div>
-    <div class="card">
-      <div class="title">Ishodi (kumulativ)</div>
-      <div class="row"><span>Crni pobjede</span><span id="bw" class="pill ok">–</span></div>
-      <div class="row"><span>Bijeli pobjede</span><span id="ww" class="pill warn">–</span></div>
-      <div class="row"><span>Neriješeno</span><span id="dr" class="pill">–</span></div>
+    <div class="kpi">
+      <div class="title">Ishod (sezona)</div>
+      <div class="flex" id="kpi-outcomes"></div>
     </div>
   </div>
 
-  <!-- CHARTS -->
-  <div class="grid grid-2" style="margin-top:16px">
+  <div class="grid grid-cols-2" style="margin-top:16px">
     <div class="card">
-      <div class="title">Dolaznost – Top 10</div>
-      <canvas id="attChart" height="170"></canvas>
+      <h2>Dolaznost po igračima (Top 10)</h2>
+      <canvas id="chartAttendance" height="120"></canvas>
     </div>
     <div class="card">
-      <div class="title">Pobjede / Porazi – Top 10</div>
-      <canvas id="wlChart" height="170"></canvas>
+      <h2>Pobjede / Porazi (Top 10)</h2>
+      <canvas id="chartWL" height="120"></canvas>
     </div>
   </div>
 
-  <!-- MASTER + SEARCH -->
   <div class="card" style="margin-top:16px">
-    <div class="row" style="margin-bottom:8px">
-      <div class="title" style="margin:0">Pregled po igračima</div>
-      <input id="q" class="search" placeholder="Pretraži igrača..." />
-    </div>
-    <div style="overflow:auto">
-      <table id="tbl">
-        <thead>
-          <tr>
-            <th>Igrač</th>
-            <th>Utakmice</th>
-            <th>W</th>
-            <th>D</th>
-            <th>L</th>
-            <th>Bodovi</th>
-            <th>Dolaznost</th>
-            <th>Forma (posl. 5)</th>
-            <th>Uplata (€)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <h2>Master tablica</h2>
+    <table class="table" id="tblPlayers">
+      <thead>
+        <tr>
+          <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th><th>Dolaznost</th><th>Uplata (€)</th><th>Forma</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <!-- MJESEČNI OBRAČUNI -->
   <div class="card" style="margin-top:16px">
-    <div class="title">Mjesečni obračuni</div>
-    <div id="months" class="grid"></div>
+    <h2>Mjesečni obračuni</h2>
+    <div id="months" class="list"></div>
   </div>
 
-  <!-- PLAYER MODAL -->
-  <div id="playerModal" class="modal" role="dialog" aria-modal="true">
+  <div class="card" style="margin-top:16px">
+    <h2>Utakmice (trenutni mjesec)</h2>
+    <div id="matches" class="list"></div>
+  </div>
+
+  <div class="footer small">Football Manager stil • by you ⚽</div>
+
+</div>
+
+<!-- Modal za mjesec -->
+<div class="modal" id="modalMonth">
+  <div class="dialog">
+    <div class="bar">
+      <div id="modalTitle">Mjesečni obračun</div>
+      <button class="close" onclick="closeMonth()">✕</button>
+    </div>
     <div class="content">
-      <span class="close" onclick="hideModal()">✕</span>
-      <div id="playerName" class="title" style="margin-top:0"></div>
-      <div id="playerSub" class="subtitle"></div>
-      <div id="playerStats"></div>
+      <div class="small" id="modalSub"></div>
+      <div style="margin-top:8px">
+        <table class="table" id="tblMonthPlayers">
+          <thead>
+            <tr><th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px">
+        <div class="section-title">Utakmice</div>
+        <div id="modalMatches" class="list"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-const DATA_URL = "./data/data.json"; // GitHub Pages path (relative)
+const API = 'YOUR_APPS_SCRIPT_WEB_APP_URL'; // ⬅️ OVDJE zalijepi Web app URL (Deploy → Web app)
 
-function asciiFold(str="") {
-  // zamjena dijakritike za stabilno pretraživanje / prikaz (ako treba)
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-           .replaceAll("đ","d").replaceAll("Đ","D")
-           .replaceAll("č","c").replaceAll("Č","C")
-           .replaceAll("ć","c").replaceAll("Ć","C")
-           .replaceAll("š","s").replaceAll("Š","S")
-           .replaceAll("ž","z").replaceAll("Ž","Z");
-}
+let DATA = null;
 
-async function loadData(){
-  const res = await fetch(DATA_URL + "?v=" + Date.now(), {cache:"no-store"});
-  const data = await res.json();
+(async function init(){
+  const res = await fetch(API + '?route=dashboard');
+  DATA = await res.json();
 
-  // shape očekivan iz VBA (Opcija A):
-  // {
-  //   season: "2025/26",
-  //   generatedAt: "2025-10-31T09:10:00Z",
-  //   kitty: 123.45,
-  //   players: [{name, played, wins, draws, losses, points?, amountTotal}],
-  //   matches: [{date:"YYYY-MM-DD", black:[...], white:[...], score:"x:y", winner:"Crni|Bijeli|Neriješeno"}],
-  //   months: [
-  //     {
-  //       month:"YYYY-MM",
-  //       matchesPlayed: n, fridays: n, kitty: number,
-  //       blackWins:n, whiteWins:n, draws:n,
-  //       players:[{name, wins, draws, losses, points, amount}],
-  //       matches:[...] // kao gore, ali za taj mjesec
-  //     }, ...
-  //   ]
-  // }
+  document.getElementById('updated').textContent = 'Ažurirano: ' + new Date(DATA.generatedAt).toLocaleString('hr-HR');
+  document.getElementById('kpi-kitty').textContent = euro(DATA.kitty);
+  document.getElementById('season').textContent = 'Sezona: ' + DATA.season;
+  document.getElementById('kpi-terms').textContent = DATA.seasonTotals.matchesPlayed + '/' + DATA.seasonTotals.fridays;
 
-  // HEAD
-  document.getElementById('kitty').textContent = ((data.kitty ?? 0).toFixed(2)) + " €";
-  document.getElementById('updated').textContent = "Ažurirano: " + (data.generatedAt || "");
+  // Ishodi
+  document.getElementById('kpi-outcomes').innerHTML = '';
+  addChip('Crni pobjede', DATA.seasonTotals.blackWins);
+  addChip('Bijeli pobjede', DATA.seasonTotals.whiteWins);
+  addChip('Neriješeno', DATA.seasonTotals.draws);
 
-  // kumulativ termini i ishodi
-  const months = Array.isArray(data.months) ? data.months : [];
-  const playedTotal = months.reduce((s,m)=>s+(m.matchesPlayed||0), 0) || (data.matches?.length||0);
-  const fridaysTotal = months.reduce((s,m)=>s+(m.fridays||0), 0);
-  const bwTotal = months.reduce((s,m)=>s+(m.blackWins||0),0) || countByOutcome(data.matches||[],"Crni");
-  const wwTotal = months.reduce((s,m)=>s+(m.whiteWins||0),0) || countByOutcome(data.matches||[],"Bijeli");
-  const drTotal = months.reduce((s,m)=>s+(m.draws||0),0) || countByOutcome(data.matches||[],"Neriješeno");
+  // Charts
+  renderAttendanceChart(DATA.players);
+  renderWLChart(DATA.players);
 
-  document.getElementById('played').textContent = playedTotal;
-  document.getElementById('fridays').textContent = fridaysTotal;
-  document.getElementById('bw').textContent = bwTotal;
-  document.getElementById('ww').textContent = wwTotal;
-  document.getElementById('dr').textContent = drTotal;
+  // Tabela igrača
+  renderPlayersTable(DATA.players);
 
-  // MASTER TABLICA + FORMA
-  const players = (data.players||[]).map(p=>{
-    const pts = (p.points!=null) ? p.points : ((p.wins||0)*3 + (p.draws||0)*1);
-    const form = buildFormForPlayer(p.name, data.matches||[], 5);
-    const attPct = playedTotal>0 ? ((p.played||0)/playedTotal*100) : 0; // sezonska dolaznost
-    return {...p, points:pts, form, attPct};
-  }).sort((a,b)=>asciiFold(a.name).localeCompare(asciiFold(b.name)));
+  // Mjeseci
+  renderMonths(DATA.months);
 
-  renderPlayersTable(players);
+  // Trenutni mjesec — utakmice
+  renderMatchesList(DATA.matches);
+})();
 
-  // CHARTS
-  renderAttendanceChart(players);
-  renderWLChart(players);
-
-  // MJESEČNI OBRAČUNI
-  renderMonths(months, players);
-}
-
-function countByOutcome(matches, target){
-  return (matches||[]).reduce((s,m)=>s + ((m.winner||"").toLowerCase() === target.toLowerCase() ? 1 : 0), 0);
-}
-
-function buildFormForPlayer(playerName, matches, lastN){
-  // vrati niz od zadnjih N rezultata: 'W' | 'D' | 'L'
-  const name = playerName?.trim()||"";
-  const hist = [];
-  const sorted = [...(matches||[])].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  for (const m of sorted) {
-    const inBlack = (m.black||[]).some(n=> normalize(n) === normalize(name));
-    const inWhite = (m.white||[]).some(n=> normalize(n) === normalize(name));
-    if (!inBlack && !inWhite) continue;
-
-    const w = (m.winner||"").toLowerCase();
-    if (w === "neriješeno") hist.push("D");
-    else if (w === "crni")  hist.push(inBlack ? "W":"L");
-    else if (w === "bijeli")hist.push(inWhite ? "W":"L");
-  }
-  return hist.slice(-lastN);
-}
-
-function normalize(s){ return asciiFold(String(s||"").trim().toLowerCase()); }
-
-function renderPlayersTable(players){
-  const tb = document.querySelector("#tbl tbody");
-  tb.innerHTML = "";
-  for (const p of players){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><a href="#" onclick="showPlayer('${encodeURIComponent(p.name)}');return false;">${p.name}</a></td>
-      <td>${p.played ?? 0}</td>
-      <td>${p.wins ?? 0}</td>
-      <td>${p.draws ?? 0}</td>
-      <td>${p.losses ?? 0}</td>
-      <td>${p.points ?? 0}</td>
-      <td>${(p.attPct||0).toFixed(1)}%</td>
-      <td>${renderFormDots(p.form)}</td>
-      <td>${(p.amountTotal??0).toFixed(2)}</td>
-    `;
-    tb.appendChild(tr);
-  }
-
-  // search
-  document.getElementById('q').oninput = (e)=>{
-    const q = normalize(e.target.value);
-    for (const row of tb.querySelectorAll("tr")){
-      const name = normalize(row.cells[0].innerText);
-      row.style.display = name.includes(q) ? "" : "none";
-    }
-  };
-}
-
-function renderFormDots(arr){
-  const parts = arr.map(v=>{
-    if (v==="W") return `<span class="form-dot dot-w" title="W"></span>`;
-    if (v==="D") return `<span class="form-dot dot-d" title="D"></span>`;
-    return `<span class="form-dot dot-l" title="L"></span>`;
-  });
-  return parts.join("");
+function euro(x){ return (Number(x)||0).toFixed(2) + ' €'; }
+function addChip(label,val){
+  const el=document.createElement('span');
+  el.className='badge';
+  el.textContent=label + ' ' + val;
+  document.getElementById('kpi-outcomes').appendChild(el);
 }
 
 function renderAttendanceChart(players){
-  const top = [...players].sort((a,b)=>(b.attPct||0)-(a.attPct||0)).slice(0,10);
-  const el = document.getElementById('attChart');
-  new Chart(el, {
+  const top = [...players]
+    .sort((a,b)=> b.attendancePct - a.attendancePct)
+    .slice(0,10);
+  new Chart(document.getElementById('chartAttendance').getContext('2d'),{
     type:'bar',
     data:{ labels: top.map(p=>p.name),
-      datasets:[{ label:'Dolaznost %', data: top.map(p=>+(p.attPct||0).toFixed(1)) }]},
-    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}}}
+      datasets:[{label:'Dolaznost %', data: top.map(p=>p.attendancePct)}] },
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}} }
   });
 }
-
 function renderWLChart(players){
-  const top = [...players].sort((a,b)=>(b.wins||0)-(a.wins||0)).slice(0,10);
-  const el = document.getElementById('wlChart');
-  new Chart(el, {
+  const top = [...players]
+    .sort((a,b)=> (b.wins - a.wins) || (a.losses - b.losses))
+    .slice(0,10);
+  new Chart(document.getElementById('chartWL').getContext('2d'),{
     type:'bar',
-    data:{ labels: top.map(p=>p.name),
+    data:{
+      labels: top.map(p=>p.name),
       datasets:[
-        { label:'W', data: top.map(p=>p.wins||0) },
-        { label:'L', data: top.map(p=>p.losses||0) }
-      ]},
+        {label:'W', data: top.map(p=>p.wins)},
+        {label:'L', data: top.map(p=>p.losses)}
+      ]
+    },
     options:{ responsive:true, scales:{y:{beginAtZero:true}} }
   });
 }
 
-function renderMonths(months, playersSeason){
-  const host = document.getElementById('months');
-  host.innerHTML = "";
+function renderPlayersTable(players){
+  const tb = document.querySelector('#tblPlayers tbody');
+  tb.innerHTML='';
+  players.forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p.name}</td>
+      <td>${p.played}</td>
+      <td>${p.wins}</td>
+      <td>${p.draws}</td>
+      <td>${p.losses}</td>
+      <td>${p.points}</td>
+      <td>${p.attendancePct.toFixed(1)}%</td>
+      <td>${euro(p.amountTotal)}</td>
+      <td>${renderForm(p.form)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function renderForm(arr){
+  return `<div class="form-strip">` + arr.map(ch=>{
+    const cls = ch==='W'?'win':(ch==='D'?'draw':'loss');
+    return `<div class="form-dot ${cls}">${ch}</div>`;
+  }).join('') + `</div>`;
+}
 
-  // posloži od najnovijeg prema starom
-  const sorted = [...(months||[])].sort((a,b)=> (b.month||"").localeCompare(a.month||""));
-
-  for (const m of sorted){
-    const div = document.createElement("div");
-    div.className = "card month-card";
-    const label = formatMonthLabel(m.month);
-    const kitty = (m.kitty ?? 0).toFixed(2);
-    const mp = m.matchesPlayed ?? (m.matches?.length || 0);
-    const fr = m.fridays ?? 0;
-
-    // top3 po bodovima (ako nije u JSON-u, izračunaj iz m.players ili iz m.matches)
-    let monthPlayers = Array.isArray(m.players) ? m.players : computeMonthPlayersFromMatches(m.matches||[]);
-    monthPlayers = monthPlayers.map(x => ({...x, points: x.points ?? (x.wins*3 + x.draws*1)}));
-
-    const top3 = [...monthPlayers].sort((a,b)=>(b.points||0)-(a.points||0)).slice(0,3);
-
-    div.innerHTML = `
-      <div class="row">
+function renderMonths(months){
+  const wrap = document.getElementById('months'); wrap.innerHTML='';
+  months.forEach(m=>{
+    const el=document.createElement('div'); el.className='kpi';
+    el.innerHTML = `
+      <div class="flex" style="justify-content:space-between">
         <div>
-          <div class="title" style="margin:0">${label}</div>
-          <div class="muted">Termini: ${mp}/${fr}</div>
+          <div class="title">Mjesec</div>
+          <div class="value">${m.month}</div>
+          <div class="chips" style="margin-top:8px">
+            <span class="badge">${m.matchesPlayed}/${m.fridays} termina</span>
+            <span class="badge">+prikupljeno ${euro(m.kitty)}</span>
+          </div>
         </div>
-        <div class="big">${kitty} €</div>
-      </div>
-      <div style="margin-top:8px">
-        ${top3.map(t=>`<span class="chip">${t.name} · ${t.points}b</span>`).join("")}
-      </div>
-      <div class="month-details"></div>
-    `;
-
-    div.addEventListener('click', ()=>{
-      const box = div.querySelector('.month-details');
-      const opened = box.style.display==="block";
-      document.querySelectorAll('.month-details').forEach(el=>el.style.display="none");
-      if (!opened){
-        box.style.display = "block";
-        renderMonthDetails(box, m, monthPlayers);
-      }
-    });
-
-    host.appendChild(div);
-  }
-}
-
-function renderMonthDetails(container, m, monthPlayers){
-  // tablica igrača
-  const tableHtml = `
-    <div style="overflow:auto;margin-top:10px">
-      <table>
-        <thead>
-          <tr>
-            <th>Igrač</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th><th>Iznos (€)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${monthPlayers.map(p=>`
-            <tr>
-              <td>${p.name}</td>
-              <td>${p.wins||0}</td>
-              <td>${p.draws||0}</td>
-              <td>${p.losses||0}</td>
-              <td>${p.points||0}</td>
-              <td>${(p.amount ?? (p.losses*3 + p.draws*2)).toFixed(2)}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  // lista utakmica
-  const matches = Array.isArray(m.matches) ? m.matches : [];
-  const matHtml = `
-    <div style="margin-top:14px">
-      <div class="title" style="font-size:16px">Utakmice</div>
-      ${matches.length===0 ? `<div class="muted">Nema utakmica za ovaj mjesec.</div>` : matches.map(mm=>`
-        <div class="match">
-          <div class="muted" style="width:90px">${mm.date||""}</div>
-          <div class="team">Crni: ${escapeHtml((mm.black||[]).join(", "))}</div>
-          <div class="score">${mm.score||""}</div>
-          <div class="team">Bijeli: ${escapeHtml((mm.white||[]).join(", "))}</div>
-          <div class="muted kicker">${mm.winner||""}</div>
+        <div>
+          <div class="title">Top 3 (bodovi)</div>
+          <div class="chips">${m.top3.map(t=>`<span class="badge">${t.name}: ${t.points}</span>`).join('')}</div>
         </div>
-      `).join("")}
-    </div>
-  `;
-
-  container.innerHTML = tableHtml + matHtml;
-}
-
-function computeMonthPlayersFromMatches(matches){
-  const map = new Map();
-  const add = (name, fld, inc=1)=>{
-    if (!map.has(name)) map.set(name, {name, wins:0, draws:0, losses:0});
-    map.get(name)[fld] += inc;
-  };
-  for (const m of (matches||[])){
-    const w = (m.winner||"").toLowerCase();
-    const black = m.black||[], white = m.white||[];
-    if (w==="neriješeno"){
-      black.forEach(n=>add(n,'draws'));
-      white.forEach(n=>add(n,'draws'));
-    } else if (w==="crni"){
-      black.forEach(n=>add(n,'wins'));
-      white.forEach(n=>add(n,'losses'));
-    } else if (w==="bijeli"){
-      white.forEach(n=>add(n,'wins'));
-      black.forEach(n=>add(n,'losses'));
-    }
-  }
-  const arr = [...map.values()].map(x=>({
-    ...x,
-    points: x.wins*3 + x.draws*1,
-    amount: x.losses*3 + x.draws*2
-  }));
-  // popuni i one koji nisu igrali? (nemamo roster liste svih igrača u JSON-u po mjesecu – preskačemo)
-  return arr;
-}
-
-function formatMonthLabel(ym){
-  if (!ym) return "-";
-  const [y,m] = ym.split("-");
-  const im = parseInt(m,10);
-  const hr = ["siječanj","veljača","ožujak","travanj","svibanj","lipanj","srpanj","kolovoz","rujan","listopad","studeni","prosinac"];
-  return (hr[im-1]||ym) + " " + y;
-}
-
-function escapeHtml(s){
-  return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-}
-
-// modal
-function showPlayer(nameEnc){
-  const name = decodeURIComponent(nameEnc);
-  const modal = document.getElementById('playerModal');
-  document.getElementById('playerName').textContent = name;
-
-  // detalji iz tablice
-  const row = [...document.querySelectorAll("#tbl tbody tr")]
-      .find(tr => tr.cells[0].innerText.trim() === name);
-  if (row){
-    const stats = `
-      <div class="row"><div>Utakmice</div><div class="pill">${row.cells[1].innerText}</div></div>
-      <div class="row"><div>W / D / L</div><div class="pill">${row.cells[2].innerText} / ${row.cells[3].innerText} / ${row.cells[4].innerText}</div></div>
-      <div class="row"><div>Bodovi</div><div class="pill">${row.cells[5].innerText}</div></div>
-      <div class="row"><div>Dolaznost</div><div class="pill">${row.cells[6].innerText}</div></div>
-      <div class="row"><div>Uplata (€)</div><div class="pill">${row.cells[8].innerText}</div></div>
-      <div style="margin-top:8px">Forma: ${row.cells[7].innerHTML}</div>
+        <div>
+          <button class="btn" onclick="openMonth('${m.month}')">Otvori obračun</button>
+        </div>
+      </div>
     `;
-    document.getElementById('playerSub').textContent = "Pregled statistike";
-    document.getElementById('playerStats').innerHTML = stats;
-  } else {
-    document.getElementById('playerSub').textContent = "";
-    document.getElementById('playerStats').innerHTML = "<div class='muted'>Nema podataka.</div>";
-  }
-
-  modal.style.display = "flex";
+    wrap.appendChild(el);
+  });
 }
-function hideModal(){ document.getElementById('playerModal').style.display = "none"; }
 
-loadData().catch(err=>{
-  console.error(err);
-  document.getElementById('kitty').textContent = "—";
-});
+function renderMatchesList(matches){
+  const wrap=document.getElementById('matches'); wrap.innerHTML='';
+  if (!matches.length){ wrap.innerHTML='<div class="small">Nema utakmica u ovom mjesecu.</div>'; return; }
+  matches.forEach(m=>{
+    const el=document.createElement('div'); el.className='kpi';
+    const badge = m.winner==='crni'?'badge':'badge';
+    const label = m.winner==='crni'?'Pobjednik: Crni':(m.winner==='bijeli'?'Pobjednik: Bijeli':'Neriješeno');
+    el.innerHTML = `
+      <div class="flex" style="justify-content:space-between">
+        <div>
+          <div class="title">${m.date}</div>
+          <div class="chips" style="margin:6px 0">
+            <span class="badge">Crni: ${m.black.join(', ')}</span>
+            <span class="badge">Bijeli: ${m.white.join(', ')}</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="value">${m.score || '-'}</div>
+          <div class="small">${label}</div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(el);
+  });
+}
+
+async function openMonth(ym){
+  const res = await fetch(API + '?route=month&ym=' + encodeURIComponent(ym));
+  const data = await res.json();
+
+  document.getElementById('modalTitle').textContent = 'Mjesečni obračun — ' + data.month;
+  document.getElementById('modalSub').textContent = `Termini: ${data.matchesPlayed}/${data.fridays}`;
+
+  const tb = document.querySelector('#tblMonthPlayers tbody');
+  tb.innerHTML='';
+  data.players.forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${p.name}</td><td>${p.played}</td><td>${p.wins}</td><td>${p.draws}</td><td>${p.losses}</td><td>${p.points}</td>`;
+    tb.appendChild(tr);
+  });
+
+  const wrap = document.getElementById('modalMatches'); wrap.innerHTML='';
+  data.matches.forEach(m=>{
+    const el=document.createElement('div'); el.className='kpi';
+    el.innerHTML = `
+      <div class="flex" style="justify-content:space-between">
+        <div>
+          <div class="title">${m.date}</div>
+          <div class="chips" style="margin:6px 0">
+            <span class="badge">Crni: ${m.black.join(', ')}</span>
+            <span class="badge">Bijeli: ${m.white.join(', ')}</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="value">${m.score || '-'}</div>
+          <div class="small">${m.winner==='crni'?'Pobjednik: Crni':(m.winner==='bijeli'?'Pobjednik: Bijeli':'Neriješeno')}</div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(el);
+  });
+
+  document.getElementById('modalMonth').style.display='flex';
+}
+function closeMonth(){ document.getElementById('modalMonth').style.display='none'; }
 </script>
 </body>
 </html>
