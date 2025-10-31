@@ -1,401 +1,165 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Nogomet – Dashboard</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <style>
-    :root{color-scheme:dark}
-    body{margin:0;background:#0b0f14;color:#e6e9ef;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
-    .grid{display:grid;gap:16px}
-    @media(min-width:900px){.grid-3{grid-template-columns:repeat(3,1fr)}.grid-2{grid-template-columns:repeat(2,1fr)}}
-    .card{background:#11161d;border:1px solid #1e2733;border-radius:14px;padding:16px}
-    .title{font-weight:800;margin:0 0 10px}
-    .t-lg{font-size:22px}.t-xl{font-size:28px}.muted{color:#97a6b3}.pill{border:1px solid #223244;background:#0f1720;border-radius:999px;padding:4px 10px;font-size:12px}
-    table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #1e2733;text-align:left;font-size:14px}th{color:#9aa7b5}
-    .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
-    .btn{cursor:pointer;border:1px solid #2a3a4e;background:#141c26;color:#e6e9ef;border-radius:8px;padding:6px 10px}
-    .badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px}
-    .b-win{background:#163b2b;color:#9dffc9}.b-draw{background:#2a2f3a;color:#d8dee9}.b-loss{background:#3b1c1c;color:#ff9b9b}
-    .wld{display:inline-flex;gap:4px}
-    .link{color:#9bc1ff;text-decoration:underline;cursor:pointer}
-    details{border:1px solid #1e2733;border-radius:10px;padding:12px;background:#0f151c}
-    summary{cursor:pointer;font-weight:700}
-    .search{width:280px;background:#0e141b;border:1px solid #203142;border-radius:10px;color:#e6e9ef;padding:8px}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Futsal Dashboard</title>
+
+<style>
+    body { font-family: Arial; background:#f4f4f4; margin:0; padding:20px; }
+    h1,h2,h3 { margin:0 0 10px 0; font-weight:600; }
+    .card { background:white; padding:15px; border-radius:6px; margin-bottom:20px; }
+    .flex { display:flex; gap:20px; flex-wrap:wrap; }
+    .stat-box { background:#fff; padding:15px; border-radius:6px; flex:1; min-width:200px; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th,td { padding:6px 10px; border-bottom:1px solid #ddd; }
+    tr:hover { background:#fafafa; cursor:pointer; }
+    .month-box { background:#fff; padding:12px; border-radius:5px; margin:10px 0; }
+    .month-header { display:flex; justify-content:space-between; cursor:pointer; }
+    .hidden { display:none; }
+    .player-popup {
+        position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+        background:#fff; padding:20px; border-radius:8px; width:350px;
+        box-shadow:0 0 10px rgba(0,0,0,0.3); display:none;
+    }
+    .close-btn { float:right; cursor:pointer; font-weight:bold; }
+</style>
 </head>
 <body>
-<div class="wrap">
 
-  <!-- HEADER CARDS -->
-  <div class="grid grid-3">
-    <div class="card">
-      <div class="title t-lg">Ukupno u blagajni (sezona)</div>
-      <div id="kitty" class="t-xl">–</div>
-      <div class="muted" id="seasonMeta"></div>
-    </div>
-    <div class="card">
-      <div class="title t-lg">Termini</div>
-      <div class="t-xl"><span id="playedSeason">–</span>/<span id="fridaysSeason">–</span></div>
-      <div class="muted">Kumulativno (od početka sezone)</div>
-    </div>
-    <div class="card">
-      <div class="title t-lg">Ishod (sezona)</div>
-      <div class="row"><span>Crni pobjede</span><span class="pill" id="wBlack">–</span></div>
-      <div class="row"><span>Bijeli pobjede</span><span class="pill" id="wWhite">–</span></div>
-      <div class="row"><span>Neriješeno</span><span class="pill" id="wDraw">–</span></div>
-    </div>
-  </div>
+<h1>⚽ Futsal Dashboard</h1>
 
-  <!-- CHARTS -->
-  <div class="grid grid-2" style="margin-top:16px">
-    <div class="card">
-      <div class="title t-lg">Dolaznost po igračima (Top 10)</div>
-      <canvas id="attChart" height="160"></canvas>
-    </div>
-    <div class="card">
-      <div class="title t-lg">Pobjede / Porazi (Top 10)</div>
-      <canvas id="wlChart" height="160"></canvas>
-    </div>
-  </div>
+<div id="topStats" class="flex"></div>
 
-  <!-- MASTER -->
-  <div class="card" style="margin-top:16px">
-    <div class="row">
-      <div class="title t-lg" style="margin:0">Master tablica</div>
-      <input id="search" class="search" placeholder="Pretraži igrače…"/>
-    </div>
-    <div class="muted" id="updated"></div>
-    <div style="overflow:auto;margin-top:8px">
-      <table id="tbl">
+<h2>Master tablica (kumulativ)</h2>
+<div class="card">
+    <table id="playersTable">
         <thead>
-          <tr>
-            <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th>
-            <th>Bodovi</th><th>Dolaznost</th><th>Uplata (I)</th><th>Forma (5)</th>
-          </tr>
+            <tr>
+                <th>Igrač</th>
+                <th>Utakmice</th>
+                <th>W</th>
+                <th>D</th>
+                <th>L</th>
+                <th>Bodovi</th>
+                <th>Dolaznost (%)</th>
+                <th>Iznos (€)</th>
+            </tr>
         </thead>
         <tbody></tbody>
-      </table>
-    </div>
-  </div>
+    </table>
+</div>
 
-  <!-- MONTHS -->
-  <div class="card" style="margin-top:16px">
-    <div class="title t-lg">Mjesečni obračuni</div>
-    <div id="months"></div>
-  </div>
+<h2>Mjesecni sažeci</h2>
+<div id="months"></div>
 
+<!-- POPUP IGRAČA -->
+<div id="playerPopup" class="player-popup">
+    <span class="close-btn" onclick="closePopup()">✖</span>
+    <h3 id="ppName"></h3>
+    <div id="ppStats"></div>
+    <h4>Zadnjih 5 utakmica</h4>
+    <div id="ppLast5"></div>
 </div>
 
 <script>
-// URL RAW JSON-a (GitHub Pages repo)
-const DATA_URL = "https://raw.githubusercontent.com/ronaldo-fenomeno9/nogomet-dashboard/main/data/data.json";
+const API = "<PASTE_YOUR_WEBAPP_URL_HERE>";
 
-// ===== UTIL =====
-const euro = n => (n ?? 0).toFixed(2) + " €";
-const td   = n => (n ?? 0);
-const by   = (arr, fn) => arr.reduce((m,x)=>((m[fn(x)]??=[]).push(x),m),{});
-const fmtDate = s => s;
-const croMonth = m => new Date(m+"-01").toLocaleDateString("hr-HR",{month:"long",year:"numeric"});
-const countFridaysInMonth = (y,m) => {
-  let c=0, d=new Date(y, m-1, 1);
-  while(d.getMonth()===m-1){ if(d.getDay()===5) c++; d.setDate(d.getDate()+1); }
-  return c;
-};
-const last5 = (arr)=>arr.slice(-5);
+async function loadData() {
+    const res = await fetch(API);
+    const data = await res.json();
+    renderTop(data);
+    renderPlayers(data);
+    renderMonths(data);
+    window.MATCHES = data.matches; // spremamo za popup
+}
+loadData();
 
-// ===== LOAD =====
-(async function init(){
-  const res  = await fetch(DATA_URL, {cache:"no-store"});
-  const data = await res.json();
+function num(x){ return Number(x).toFixed(2); }
 
-  const season = data.season || "";
-  const kitty  = +data.kitty || 0;
-  const players= Array.isArray(data.players) ? data.players : [];
-  const matches= Array.isArray(data.matches) ? data.matches : [];
+/* TOP STATISTIKA */
+function renderTop(d){
+    document.getElementById("topStats").innerHTML = `
+        <div class="stat-box"><h3>Blagajna</h3><b>${num(d.kitty)} €</b></div>
+        <div class="stat-box"><h3>Termini</h3><b>${d.matches.length}</b></div>
+    `;
+}
 
-  // ----- SEASON CUMULATIVE -----
-  const monthsSet = [...new Set(matches.map(m=>m.date.slice(0,7)))];
-  const fridaysSeason = monthsSet
-    .map(mm=>countFridaysInMonth(+mm.slice(0,4), +mm.slice(5,7)))
-    .reduce((a,b)=>a+b,0);
-  const playedSeason = matches.length;
-
-  let bw=0, ww=0, dd=0;
-  matches.forEach(m=>{
-    const w = (m.winner||"").toLowerCase();
-    if (w==="crni") bw++;
-    else if (w==="bijeli") ww++;
-    else dd++;
-  });
-
-  // ----- ATTENDANCE (season) -----
-  const totalSlots = matches.length;
-  const partCount = {}; // name -> played
-  matches.forEach(m=>{
-    (m.black||[]).concat(m.white||[]).forEach(n=>{
-      const nm = (n||"").trim();
-      if (!nm) return;
-      partCount[nm] = (partCount[nm]||0)+1;
+/* MASTER TABLICA */
+function renderPlayers(d){
+    const tbody = document.querySelector("#playersTable tbody");
+    tbody.innerHTML = "";
+    d.players.forEach(p=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`
+            <td onclick="showPlayer('${p.name}')">${p.name}</td>
+            <td>${p.played}</td>
+            <td>${p.wins}</td>
+            <td>${p.draws}</td>
+            <td>${p.losses}</td>
+            <td>${p.points}</td>
+            <td>${num(p.attendancePct)}</td>
+            <td>${num(p.amountTotal)}</td>
+        `;
+        tbody.appendChild(tr);
     });
-  });
+}
 
-  // ----- FORM (last 5) -----
-  function playerForm(name){
-    const res = [];
-    matches.forEach(m=>{
-      const inBlack = (m.black||[]).includes(name);
-      const inWhite = (m.white||[]).includes(name);
-      if (!inBlack && !inWhite) return;
-
-      const w = (m.winner||"").toLowerCase();
-      if (w==="crni")   res.push(inBlack ? "W" : "L");
-      else if (w==="bijeli") res.push(inWhite ? "W":"L");
-      else res.push("D");
-    });
-    return last5(res);
-  }
-
-  // ----- HEADER -----
-  document.getElementById('kitty').textContent = euro(kitty);
-  document.getElementById('seasonMeta').textContent = `Sezona: ${season} • Ažurirano: ${data.generatedAt || ""}`;
-  document.getElementById('playedSeason').textContent  = playedSeason;
-  document.getElementById('fridaysSeason').textContent = fridaysSeason;
-  document.getElementById('wBlack').textContent = bw;
-  document.getElementById('wWhite').textContent = ww;
-  document.getElementById('wDraw').textContent  = dd;
-  document.getElementById('updated').textContent = "Ažurirano: " + (data.generatedAt || "");
-
-  // ----- MASTER TABLE -----
-  const tb = document.querySelector("#tbl tbody");
-  function renderTable(filter=""){
-    tb.innerHTML = "";
-    players
-      .filter(p => p.name.toLowerCase().includes(filter.toLowerCase()))
-      .forEach(p=>{
-        const attPct = totalSlots>0 ? ( (partCount[p.name]||0) / totalSlots * 100 ) : 0;
-        const form5  = playerForm(p.name);
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><span class="link" data-player="${p.name}">${p.name}</span></td>
-          <td>${td(p.played)}</td>
-          <td>${td(p.wins)}</td>
-          <td>${td(p.draws)}</td>
-          <td>${td(p.losses)}</td>
-          <td>${td(p.points)}</td>
-          <td>${attPct.toFixed(1)}%</td>
-          <td>${euro(+p.amountTotal||0)}</td>
-          <td class="wld">${form5.map(x=>x==="W"
-            ? `<span class="badge b-win">W</span>`
-            : x==="L" ? `<span class="badge b-loss">L</span>` : `<span class="badge b-draw">D</span>`).join("")}</td>`;
-        tb.appendChild(tr);
-      });
-    // klik za popup igrača
-    tb.querySelectorAll('[data-player]').forEach(a=>a.addEventListener('click',()=>showPlayer(a.dataset.player)));
-  }
-  renderTable();
-  document.getElementById('search').addEventListener('input', e=>renderTable(e.target.value));
-
-  // ----- CHARTS -----
-  const attArr = players.map(p=>{
-    const pct = totalSlots>0 ? ((partCount[p.name]||0)/totalSlots*100):0;
-    return {name:p.name,pct};
-  }).sort((a,b)=>b.pct-a.pct).slice(0,10);
-
-  new Chart(document.getElementById('attChart'), {
-    type:'bar',
-    data:{labels:attArr.map(x=>x.name), datasets:[{label:"Dolaznost %", data:attArr.map(x=>+x.pct.toFixed(1))}]},
-    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}}}
-  });
-
-  const wlArr = players.map(p=>({name:p.name, w:+p.wins||0, l:+p.losses||0}))
-                       .sort((a,b)=>b.w-a.w).slice(0,10);
-  new Chart(document.getElementById('wlChart'), {
-    type:'bar',
-    data:{labels:wlArr.map(x=>x.name), datasets:[
-      {label:"W", data:wlArr.map(x=>x.w)},
-      {label:"L", data:wlArr.map(x=>x.l)}
-    ]},
-    options:{scales:{y:{beginAtZero:true}}}
-  });
-
-  // ----- MONTHLY CARDS -----
-  const block = document.getElementById('months');
-  const byMonth = by(matches, m=>m.date.slice(0,7));
-
-  function monthStats(mm){
-    const arr = byMonth[mm]||[];
-    const [Y,M] = mm.split("-").map(Number);
-    const fr = countFridaysInMonth(Y,M);
-
-    // po-igrač mjesečni zbrojevi
-    const stats = {}; // name -> {played,w,d,l,points,amount}
-    function ensure(n){ if(!stats[n]) stats[n]={played:0,w:0,d:0,l:0,points:0,amount:0}; return stats[n]; }
-
-    arr.forEach(m=>{
-      const score = (m.score||"").trim();
-      const w = (m.winner||"").toLowerCase();
-
-      const B = (m.black||[]), W = (m.white||[]);
-      // odigrano
-      B.forEach(n=>ensure(n).played++);
-      W.forEach(n=>ensure(n).played++);
-
-      if (w==="crni"){
-        B.forEach(n=>{ let s=ensure(n); s.w++; s.points+=3; });
-        W.forEach(n=>{ let s=ensure(n); s.l++; s.amount+=3; });
-      } else if (w==="bijeli"){
-        W.forEach(n=>{ let s=ensure(n); s.w++; s.points+=3; });
-        B.forEach(n=>{ let s=ensure(n); s.l++; s.amount+=3; });
-      } else {
-        // neriješeno – svi daju 2 €
-        B.forEach(n=>{ let s=ensure(n); s.d++; s.points+=1; s.amount+=2; });
-        W.forEach(n=>{ let s=ensure(n); s.d++; s.points+=1; s.amount+=2; });
-      }
-    });
-
-    // penalizirani <50% u tom mjesecu
-    const penalized = Object.keys(stats).filter(n => stats[n].played < arr.length/2);
-
-    // top 3 po bodovima
-    const top = Object.entries(stats)
-      .map(([name,o])=>({name,points:o.points}))
-      .sort((a,b)=>b.points-a.points).slice(0,3);
-
-    const monthSum = Object.values(stats).reduce((s,o)=>s+(o.amount||0),0) + penalized.length*2;
-
-    return {played:arr.length, fridays:fr, sum:monthSum, stats, penalized, top, matches:arr};
-  }
-
-  // render svih mjeseci
-  monthsSet.sort().forEach(mm=>{
-    const ms = monthStats(mm);
-    const el = document.createElement('div');
-    el.style.marginBottom="12px";
-    el.innerHTML = `
-      <details>
-        <summary class="row">
-          <span><strong>${croMonth(mm)}</strong> • ${ms.played}/${ms.fridays} termina</span>
-          <span class="t-xl"><strong>${euro(ms.sum)}</strong></span>
-        </summary>
-        <div style="margin-top:10px">
-          <div class="row">
-            <div>
-              <span class="pill">Crni ${byMonth[mm].filter(x=>x.winner?.toLowerCase()==="crni").length}</span>
-              <span class="pill">Bijeli ${byMonth[mm].filter(x=>x.winner?.toLowerCase()==="bijeli").length}</span>
-              <span class="pill">Neriješeno ${byMonth[mm].filter(x=>x.winner?.toLowerCase()!=="crni" && x.winner?.toLowerCase()!=="bijeli").length}</span>
-              <span class="pill">Penalizirani: <span class="link" data-pz="${mm}">${ms.penalized.length}</span></span>
-              <span class="pill">+penali ${euro(ms.penalized.length*2)}</span>
+/* MJESECNI SAŽECI */
+function renderMonths(d){
+    const box = document.getElementById("months");
+    box.innerHTML = "";
+    d.months.forEach(m=>{
+        const div=document.createElement("div");
+        div.className="month-box";
+        const id = "det_"+m.month;
+        div.innerHTML=`
+            <div class="month-header" onclick="toggle('${id}')">
+                <b>${m.month}</b>
+                <span>${m.matchesPlayed}/${m.fridays} termina — ${num(m.kitty)} €</span>
             </div>
-          </div>
-
-          <div id="pz-${mm}" style="display:none;margin:8px 0 12px 0">
-            <div class="muted">Penalizirani igrači (<50% dolaznost u mjesecu):</div>
-            <div>${ms.penalized.length? ms.penalized.join(", ") : "—"}</div>
-          </div>
-
-          <div style="margin-top:10px">
-            <div class="title t-lg">Igrači – ${croMonth(mm)}</div>
-            <div style="overflow:auto">
-              <table>
-                <thead>
-                  <tr><th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th><th>Dolaznost</th><th>Penal</th><th>Iznos</th></tr>
-                </thead>
-                <tbody>
-                ${Object.keys(ms.stats).sort().map(n=>{
-                  const o = ms.stats[n];
-                  const att = ms.played? (o.played/ms.played*100):0;
-                  const pen = ms.penalized.includes(n) ? "DA" : "NE";
-                  return `<tr>
-                    <td>${n}</td><td>${o.played||0}</td><td>${o.w||0}</td><td>${o.d||0}</td><td>${o.l||0}</td>
-                    <td>${att.toFixed(1)}%</td><td>${pen}</td><td>${euro((o.amount||0)+(pen==="DA"?2:0))}</td>
-                  </tr>`;
-                }).join("")}
-                </tbody>
-              </table>
+            <div id="${id}" class="hidden">
+                <h4>Utakmice</h4>
+                ${renderMatchList(m.month)}
             </div>
-          </div>
-
-          <div style="margin-top:14px">
-            <div class="title t-lg">Utakmice – ${croMonth(mm)}</div>
-            ${ms.matches.map(m=>`
-              <div class="card" style="padding:10px;margin-bottom:8px">
-                <div class="row">
-                  <div class="muted">${m.date}</div>
-                  <div class="t-lg">${m.score||""}</div>
-                </div>
-                <div class="row">
-                  <div><strong>Crni</strong><br>${(m.black||[]).join(", ")}</div>
-                  <div><strong>Bijeli</strong><br>${(m.white||[]).join(", ")}</div>
-                </div>
-                <div style="margin-top:6px">
-                  ${
-                    (m.winner||"").toLowerCase()==="crni" ? '<span class="badge b-win">Pobjednik: Crni</span>'
-                    : (m.winner||"").toLowerCase()==="bijeli" ? '<span class="badge b-win">Pobjednik: Bijeli</span>'
-                    : '<span class="badge b-draw">Neriješeno</span>'
-                  }
-                </div>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      </details>`;
-    block.appendChild(el);
-
-    // toggle penaliziranih
-    el.querySelector(`[data-pz="${mm}"]`).addEventListener('click',()=>{
-      const t = document.getElementById(`pz-${mm}`);
-      t.style.display = t.style.display==="none" ? "block":"none";
+        `;
+        box.appendChild(div);
     });
-  });
+}
 
-  // ----- PLAYER MODAL (na brzinu, native <dialog> bez CSS frameworka) -----
-  function showPlayer(name){
-    const dlg = document.createElement('dialog');
-    dlg.style.width="min(700px, 95vw)"; dlg.style.background="#0e141b"; dlg.style.color="#e6e9ef"; dlg.style.border="1px solid #1e2733"; dlg.style.borderRadius="12px";
-    const p = players.find(x=>x.name===name) || {name};
-    const playedMatches = matches.filter(m => (m.black||[]).includes(name) || (m.white||[]).includes(name));
-    const form5 = playerForm(name);
+function toggle(id){
+    document.getElementById(id).classList.toggle("hidden");
+}
 
-    dlg.innerHTML = `
-      <form method="dialog" style="padding:16px">
-        <div class="row"><div class="title t-lg">${name}</div><button class="btn">Zatvori</button></div>
-        <div class="grid grid-3" style="margin-top:10px">
-          <div class="card"><div class="muted">Utakmice</div><div class="t-xl">${playedMatches.length}</div></div>
-          <div class="card"><div class="muted">Bodovi</div><div class="t-xl">${p.points ?? "-"}</div></div>
-          <div class="card"><div class="muted">Uplata (I)</div><div class="t-xl">${euro(+p.amountTotal||0)}</div></div>
-        </div>
-        <div style="margin-top:12px">
-          <div class="muted">Forma (zadnjih 5):</div>
-          <div class="wld" style="margin-top:6px">
-            ${form5.map(x=>x==="W"
-              ? `<span class="badge b-win">W</span>`
-              : x==="L" ? `<span class="badge b-loss">L</span>` : `<span class="badge b-draw">D</span>`).join("")}
-          </div>
-        </div>
-        <div style="margin-top:12px">
-          <div class="muted">Utakmice</div>
-          ${playedMatches.map(m=>{
-            const inB=(m.black||[]).includes(name), inW=(m.white||[]).includes(name);
-            const res = (m.winner||"").toLowerCase()==="crni" ? (inB?"W":"L")
-                      : (m.winner||"").toLowerCase()==="bijeli" ? (inW?"W":"L") : "D";
-            const badge = res==="W" ? 'b-win' : res==="L" ? 'b-loss':'b-draw';
-            return `<div class="row" style="padding:6px 0;border-bottom:1px solid #1e2733">
-              <div class="muted">${m.date} • ${m.score||""}</div>
-              <span class="badge ${badge}">${res}</span>
-            </div>`;
-          }).join("")}
-        </div>
-      </form>`;
-    document.body.appendChild(dlg);
-    dlg.addEventListener('close', ()=>dlg.remove());
-    dlg.showModal();
-  }
+/* LISTA UTAKMICA ZA MJESEC */
+function renderMatchList(month){
+    const list = window.MATCHES.filter(m=>m.date.startsWith(month));
+    if(list.length===0) return "<i>Nema utakmica.</i>";
+    let t="<ul>";
+    list.forEach(g=>{
+        t+=`<li>${g.date}: ${g.black.join(", ")} vs ${g.white.join(", ")} — ${g.score} (${g.winner})</li>`;
+    })
+    return t+"</ul>";
+}
 
-})();
+/* POPUP IGRAČA */
+function showPlayer(name){
+    const all = window.MATCHES;
+    const last5 = all.filter(m=>[...m.black,...m.white].includes(name)).slice(-5);
+
+    document.getElementById("ppName").innerText=name;
+    document.getElementById("ppStats").innerHTML="";
+    document.getElementById("ppLast5").innerHTML= last5.length ?
+        "<ul>" + last5.map(m=>`<li>${m.date} — ${m.score} (${m.winner})</li>`).join("") + "</ul>"
+        : "<i>Nema utakmica.</i>";
+
+    document.getElementById("playerPopup").style.display="block";
+}
+
+function closePopup(){
+    document.getElementById("playerPopup").style.display="none";
+}
 </script>
+
 </body>
 </html>
