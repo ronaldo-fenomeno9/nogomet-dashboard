@@ -4,9 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Nogomet HNB Savica — Dashboard</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 :root{
   --bg:#0f1720; --panel:#121a24; --muted:#8aa0b2; --text:#e6eef6; --accent:#3dd6ff;
@@ -14,7 +16,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto}
-a{color:inherit}
+a{color:inherit;text-decoration:none}
 .container{max-width:1200px;margin:0 auto;padding:24px}
 .header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
 .logo{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#38bdf8,#0ea5e9)}
@@ -51,6 +53,7 @@ h1{font-size:20px;margin:0}
 .small{font-size:12px;color:#89a1b4}
 </style>
 </head>
+
 <body>
 <div class="container">
 
@@ -75,7 +78,7 @@ h1{font-size:20px;margin:0}
       <div class="small">Odigrano / mogućih petaka</div>
     </div>
     <div class="kpi">
-      <div class="title">Ishod (sezona)</div>
+      <div class="title">Ishodi (sezona)</div>
       <div class="flex" id="kpi-outcomes"></div>
     </div>
   </div>
@@ -117,23 +120,21 @@ h1{font-size:20px;margin:0}
 
 </div>
 
-<!-- Modal za mjesec -->
+<!-- Modal -->
 <div class="modal" id="modalMonth">
   <div class="dialog">
     <div class="bar">
-      <div id="modalTitle">Mjesečni obračun</div>
+      <div id="modalTitle"></div>
       <button class="close" onclick="closeMonth()">✕</button>
     </div>
     <div class="content">
       <div class="small" id="modalSub"></div>
-      <div style="margin-top:8px">
-        <table class="table" id="tblMonthPlayers">
-          <thead>
-            <tr><th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+
+      <table class="table" id="tblMonthPlayers" style="margin-top:14px">
+        <thead><tr><th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
       <div style="margin-top:16px">
         <div class="section-title">Utakmice</div>
         <div id="modalMatches" class="list"></div>
@@ -143,86 +144,85 @@ h1{font-size:20px;margin:0}
 </div>
 
 <script>
+
+// ✅ OVDJE STAVI SVOJ /exec URL
 const API = https://script.google.com/macros/s/AKfycbwrkZW7HrjakHXndboptNu4pqss0FZWwpzy_e0-nGd1RastXxxbBWyN_I6kBaBAgXhztg/exec
 
 let DATA = null;
 
+function euro(x){ return Number(x).toFixed(2) + " €"; }
+
 (async function init(){
-  const res = await fetch(API + '?route=dashboard');
+  const res = await fetch(API + "?route=dashboard");
   DATA = await res.json();
 
-  document.getElementById('updated').textContent = 'Ažurirano: ' + new Date(DATA.generatedAt).toLocaleString('hr-HR');
-  document.getElementById('kpi-kitty').textContent = euro(DATA.kitty);
-  document.getElementById('season').textContent = 'Sezona: ' + DATA.season;
-  document.getElementById('kpi-terms').textContent = DATA.seasonTotals.matchesPlayed + '/' + DATA.seasonTotals.fridays;
+  // top header info
+  document.getElementById("updated").textContent = "Ažurirano: " + new Date(DATA.generatedAt).toLocaleString("hr-HR");
+  document.getElementById("season").textContent = "Sezona: " + DATA.season;
+  document.getElementById("kpi-kitty").textContent = euro(DATA.kitty);
 
-  // Ishodi
-  document.getElementById('kpi-outcomes').innerHTML = '';
-  addChip('Crni pobjede', DATA.seasonTotals.blackWins);
-  addChip('Bijeli pobjede', DATA.seasonTotals.whiteWins);
-  addChip('Neriješeno', DATA.seasonTotals.draws);
+  document.getElementById("kpi-terms").textContent =
+    DATA.seasonTotals.matchesPlayed + "/" + DATA.seasonTotals.fridays;
 
-  // Charts
+  // ishodi
+  document.getElementById("kpi-outcomes").innerHTML = "";
+  addChip("Crni pobjede", DATA.seasonTotals.blackWins);
+  addChip("Bijeli pobjede", DATA.seasonTotals.whiteWins);
+  addChip("Neriješeno", DATA.seasonTotals.draws);
+
   renderAttendanceChart(DATA.players);
   renderWLChart(DATA.players);
-
-  // Tabela igrača
   renderPlayersTable(DATA.players);
-
-  // Mjeseci
   renderMonths(DATA.months);
-
-  // Trenutni mjesec — utakmice
   renderMatchesList(DATA.matches);
 })();
 
-function euro(x){ return (Number(x)||0).toFixed(2) + ' €'; }
 function addChip(label,val){
-  const el=document.createElement('span');
-  el.className='badge';
-  el.textContent=label + ' ' + val;
-  document.getElementById('kpi-outcomes').appendChild(el);
+  const el=document.createElement("span");
+  el.className="badge";
+  el.textContent = label + " " + val;
+  document.getElementById("kpi-outcomes").appendChild(el);
 }
 
 function renderAttendanceChart(players){
-  const top = [...players]
-    .sort((a,b)=> b.attendancePct - a.attendancePct)
-    .slice(0,10);
-  new Chart(document.getElementById('chartAttendance').getContext('2d'),{
-    type:'bar',
-    data:{ labels: top.map(p=>p.name),
-      datasets:[{label:'Dolaznost %', data: top.map(p=>p.attendancePct)}] },
-    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:100}} }
+  const top = [...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
+
+  new Chart(document.getElementById("chartAttendance"),{
+    type:"bar",
+    data:{
+      labels:top.map(p=>p.name),
+      datasets:[{label:"Dolaznost %",data:top.map(p=>p.attendancePct)}]
+    },
+    options:{plugins:{legend:{display:false}},scales:{y:{min:0,max:100}}}
   });
 }
+
 function renderWLChart(players){
-  const top = [...players]
-    .sort((a,b)=> (b.wins - a.wins) || (a.losses - b.losses))
-    .slice(0,10);
-  new Chart(document.getElementById('chartWL').getContext('2d'),{
-    type:'bar',
+  const top=[...players].sort((a,b)=>(b.W-a.W)||(a.L-b.L)).slice(0,10);
+
+  new Chart(document.getElementById("chartWL"),{
+    type:"bar",
     data:{
-      labels: top.map(p=>p.name),
+      labels:top.map(p=>p.name),
       datasets:[
-        {label:'W', data: top.map(p=>p.wins)},
-        {label:'L', data: top.map(p=>p.losses)}
+        {label:"W",data:top.map(p=>p.W)},
+        {label:"L",data:top.map(p=>p.L)}
       ]
-    },
-    options:{ responsive:true, scales:{y:{beginAtZero:true}} }
+    }
   });
 }
 
 function renderPlayersTable(players){
-  const tb = document.querySelector('#tblPlayers tbody');
-  tb.innerHTML='';
+  const tb=document.querySelector("#tblPlayers tbody");
+  tb.innerHTML="";
   players.forEach(p=>{
-    const tr=document.createElement('tr');
+    const tr=document.createElement("tr");
     tr.innerHTML = `
       <td>${p.name}</td>
       <td>${p.played}</td>
-      <td>${p.wins}</td>
-      <td>${p.draws}</td>
-      <td>${p.losses}</td>
+      <td>${p.W}</td>
+      <td>${p.D}</td>
+      <td>${p.L}</td>
       <td>${p.points}</td>
       <td>${p.attendancePct.toFixed(1)}%</td>
       <td>${euro(p.amountTotal)}</td>
@@ -231,17 +231,22 @@ function renderPlayersTable(players){
     tb.appendChild(tr);
   });
 }
+
 function renderForm(arr){
   return `<div class="form-strip">` + arr.map(ch=>{
-    const cls = ch==='W'?'win':(ch==='D'?'draw':'loss');
+    const cls = ch==="W"?"win":(ch==="D"?"draw":"loss");
     return `<div class="form-dot ${cls}">${ch}</div>`;
-  }).join('') + `</div>`;
+  }).join("") + `</div>`;
 }
 
 function renderMonths(months){
-  const wrap = document.getElementById('months'); wrap.innerHTML='';
+  const wrap=document.getElementById("months");
+  wrap.innerHTML="";
+
   months.forEach(m=>{
-    const el=document.createElement('div'); el.className='kpi';
+    const el=document.createElement("div");
+    el.className="kpi";
+
     el.innerHTML = `
       <div class="flex" style="justify-content:space-between">
         <div>
@@ -249,15 +254,15 @@ function renderMonths(months){
           <div class="value">${m.month}</div>
           <div class="chips" style="margin-top:8px">
             <span class="badge">${m.matchesPlayed}/${m.fridays} termina</span>
-            <span class="badge">+prikupljeno ${euro(m.kitty)}</span>
+            <span class="badge">Uplaćeno: ${euro(m.kitty)}</span>
           </div>
         </div>
         <div>
-          <div class="title">Top 3 (bodovi)</div>
-          <div class="chips">${m.top3.map(t=>`<span class="badge">${t.name}: ${t.points}</span>`).join('')}</div>
+          <div class="title">Top 3</div>
+          <div class="chips">${m.top3.map(t=>`<span class="badge">${t.name}: ${t.points}</span>`).join("")}</div>
         </div>
         <div>
-          <button class="btn" onclick="openMonth('${m.month}')">Otvori obračun</button>
+          <button class="btn" onclick="openMonth('${m.month}')">Otvori</button>
         </div>
       </div>
     `;
@@ -266,23 +271,31 @@ function renderMonths(months){
 }
 
 function renderMatchesList(matches){
-  const wrap=document.getElementById('matches'); wrap.innerHTML='';
-  if (!matches.length){ wrap.innerHTML='<div class="small">Nema utakmica u ovom mjesecu.</div>'; return; }
+  const wrap=document.getElementById("matches");
+  wrap.innerHTML="";
+
+  if (!matches.length){
+    wrap.innerHTML="<div class='small'>Nema utakmica u ovom mjesecu.</div>";
+    return;
+  }
+
   matches.forEach(m=>{
-    const el=document.createElement('div'); el.className='kpi';
-    const badge = m.winner==='crni'?'badge':'badge';
-    const label = m.winner==='crni'?'Pobjednik: Crni':(m.winner==='bijeli'?'Pobjednik: Bijeli':'Neriješeno');
+    const el=document.createElement("div");
+    el.className="kpi";
+    const label = m.winner==="crni" ? "Pobjednik: Crni" :
+                  m.winner==="bijeli" ? "Pobjednik: Bijeli" : "Neriješeno";
+
     el.innerHTML = `
       <div class="flex" style="justify-content:space-between">
         <div>
           <div class="title">${m.date}</div>
           <div class="chips" style="margin:6px 0">
-            <span class="badge">Crni: ${m.black.join(', ')}</span>
-            <span class="badge">Bijeli: ${m.white.join(', ')}</span>
+            <span class="badge">Crni: ${m.black.join(", ")}</span>
+            <span class="badge">Bijeli: ${m.white.join(", ")}</span>
           </div>
         </div>
         <div style="text-align:right">
-          <div class="value">${m.score || '-'}</div>
+          <div class="value">${m.score}</div>
           <div class="small">${label}</div>
         </div>
       </div>
@@ -292,45 +305,62 @@ function renderMatchesList(matches){
 }
 
 async function openMonth(ym){
-  const res = await fetch(API + '?route=month&ym=' + encodeURIComponent(ym));
+  const res = await fetch(API + "?route=month&ym=" + ym);
   const data = await res.json();
 
-  document.getElementById('modalTitle').textContent = 'Mjesečni obračun — ' + data.month;
-  document.getElementById('modalSub').textContent = `Termini: ${data.matchesPlayed}/${data.fridays}`;
+  document.getElementById("modalTitle").textContent = "Mjesečni obračun — " + ym;
+  document.getElementById("modalSub").textContent =
+    `Termini: ${data.matchesPlayed}/${data.fridays} • Uplaćeno: ${euro(data.kitty)}`;
 
-  const tb = document.querySelector('#tblMonthPlayers tbody');
-  tb.innerHTML='';
+  // players table
+  const tb=document.querySelector("#tblMonthPlayers tbody");
+  tb.innerHTML="";
   data.players.forEach(p=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${p.name}</td><td>${p.played}</td><td>${p.wins}</td><td>${p.draws}</td><td>${p.losses}</td><td>${p.points}</td>`;
+    const tr=document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.name}</td>
+      <td>${p.played}</td>
+      <td>${p.W}</td>
+      <td>${p.D}</td>
+      <td>${p.L}</td>
+      <td>${p.points}</td>
+    `;
     tb.appendChild(tr);
   });
 
-  const wrap = document.getElementById('modalMatches'); wrap.innerHTML='';
+  // matches
+  const wrap=document.getElementById("modalMatches");
+  wrap.innerHTML="";
   data.matches.forEach(m=>{
-    const el=document.createElement('div'); el.className='kpi';
+    const el=document.createElement("div");
+    el.className="kpi";
+    const label = m.winner==="crni"?"Pobjednik: Crni":(m.winner==="bijeli"?"Pobjednik: Bijeli":"Neriješeno");
+
     el.innerHTML = `
       <div class="flex" style="justify-content:space-between">
         <div>
           <div class="title">${m.date}</div>
           <div class="chips" style="margin:6px 0">
-            <span class="badge">Crni: ${m.black.join(', ')}</span>
-            <span class="badge">Bijeli: ${m.white.join(', ')}</span>
+            <span class="badge">Crni: ${m.black.join(", ")}</span>
+            <span class="badge">Bijeli: ${m.white.join(", ")}</span>
           </div>
         </div>
         <div style="text-align:right">
-          <div class="value">${m.score || '-'}</div>
-          <div class="small">${m.winner==='crni'?'Pobjednik: Crni':(m.winner==='bijeli'?'Pobjednik: Bijeli':'Neriješeno')}</div>
+          <div class="value">${m.score}</div>
+          <div class="small">${label}</div>
         </div>
       </div>
     `;
     wrap.appendChild(el);
   });
 
-  document.getElementById('modalMonth').style.display='flex';
+  document.getElementById("modalMonth").style.display="flex";
 }
-function closeMonth(){ document.getElementById('modalMonth').style.display='none'; }
+
+function closeMonth(){
+  document.getElementById("modalMonth").style.display="none";
+}
+
 </script>
 </body>
 </html>
-
