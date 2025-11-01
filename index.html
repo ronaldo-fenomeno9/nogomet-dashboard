@@ -32,7 +32,13 @@ h1{font-size:20px;margin:0}
 .kpi{background:var(--card);border:1px solid #1e2a38;border-radius:14px;padding:14px}
 .kpi .title{color:var(--muted);font-size:12px;margin-bottom:6px}
 .kpi .value{font-weight:700;font-size:24px}
-.kpi.clickable{cursor:pointer}
+.kpi.clickable:hover {
+  background:#1b2633;
+  border-color:#2c3a4a;
+  transform:translateY(-1px);
+  transition:0.15s ease;
+}
+
 .badge{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:#cfe4f3;border:1px solid #223141;border-radius:999px;padding:4px 10px;font-size:12px}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{padding:10px 8px;border-bottom:1px solid #1f2a36;font-size:14px}
@@ -455,7 +461,7 @@ function openMonthModal(monthObj){
   tb.innerHTML = "";
 
   const rows = Object.values(monthObj.table || {});
-  rows.sort((a,b)=> (b.points||0) - (a.points||0)); // po bodovima
+  rows.sort((a,b)=> (b.amount||0) - (a.amount||0)); // po uplati
 
   rows.forEach(r=>{
     const tr = document.createElement("tr");
@@ -518,7 +524,11 @@ function renderDuos(matches){
   else topBest.forEach(p=>{
     const li = document.createElement("li");
     li.className = "pill";
-    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; <span class="result-chip W">${streakStr("W", p.w)}</span>`;
+    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong>
+  <span class="form-strip">
+    ${Array.from({length:p.w}).map(()=>`<span class="form-dot win">W</span>`).join("")}
+  </span>`;
+
     bestUL.appendChild(li);
   });
 
@@ -526,7 +536,11 @@ function renderDuos(matches){
   else topWorst.forEach(p=>{
     const li = document.createElement("li");
     li.className = "pill";
-    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; <span class="result-chip L">${streakStr("L", p.l)}</span>`;
+    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong>
+  <span class="form-strip">
+    ${Array.from({length:p.l}).map(()=>`<span class="form-dot loss">L</span>`).join("")}
+  </span>`;
+
     worstUL.appendChild(li);
   });
 }
@@ -563,3 +577,4 @@ function renderWLChart(players){
 
 </body>
 </html>
+
