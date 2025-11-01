@@ -77,6 +77,12 @@ h1{font-size:20px;margin:0}
     </div>
   </div>
 
+  <!-- ✅ NOVO: Top forma card -->
+  <div class="card" style="margin-top:16px">
+    <h2>Najbolja forma — Top 5</h2>
+    <div id="topForm" class="list"></div>
+  </div>
+
   <div class="grid grid-cols-2" style="margin-top:16px">
     <div class="card">
       <h2>Dolaznost po igračima (Top 10)</h2>
@@ -108,7 +114,6 @@ h1{font-size:20px;margin:0}
 </div>
 
 <script>
-// ✅ TVOJ API URL – SAMO OVO MIJENJAŠ
 const API = "https://script.google.com/macros/s/AKfycbxOvVJpNioiQ5BAwdry5wRrcLffiVkyXztSYTa4wE8BNQ65lgiI1nt5RzKoDYIRfyVMFw/exec";
 
 let DATA = null;
@@ -117,7 +122,6 @@ let DATA = null;
   const res = await fetch(API);
   DATA = await res.json();
 
-  // DEBUG
   console.log("DATA:", DATA);
 
   document.getElementById('updated').textContent =
@@ -131,12 +135,10 @@ let DATA = null;
     DATA.seasonTotals.matchesPlayed + "/" + DATA.seasonTotals.fridays;
 
   renderOutcomes(DATA.seasonTotals);
-
+  renderTopForm(DATA.players);   // ✅ NOVO
   renderAttendanceChart(DATA.players);
   renderWLChart(DATA.players);
-
   renderPlayersTable(DATA.players);
-
   renderMonths(DATA.months);
 })();
 
@@ -148,6 +150,30 @@ function renderOutcomes(t){
     <span class="badge">Bijeli pobjede: ${t.whiteWins}</span>
     <span class="badge">Neriješeno: ${t.draws}</span>
   `;
+}
+
+/* ✅ NOVO: najbolja forma */
+function renderTopForm(players){
+  const scored = players.map(p=>{
+    const score = p.form.reduce((acc,ch)=>{
+      if (ch==="W") return acc+3;
+      if (ch==="D") return acc+1;
+      return acc;
+    },0);
+    return { name:p.name, score, form:p.form };
+  });
+
+  const top5 = scored.sort((a,b)=>b.score-a.score).slice(0,5);
+
+  const wrap = document.getElementById("topForm");
+  wrap.innerHTML = "";
+
+  top5.forEach(p=>{
+    const div = document.createElement("div");
+    div.className="badge";
+    div.innerHTML = `${p.name} — ${p.score} bodova &nbsp; ${renderForm(p.form)}`;
+    wrap.appendChild(div);
+  });
 }
 
 function renderPlayersTable(players){
@@ -225,4 +251,3 @@ function renderWLChart(players){
 
 </body>
 </html>
-
