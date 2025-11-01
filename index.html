@@ -65,13 +65,14 @@ h1{font-size:20px;margin:0}
   padding:10px 0;border-bottom:1px solid #1f2a36;font-size:14px;
   display:flex;flex-wrap:wrap;gap:8px;align-items:center;
 }
-.match-row .side{opacity:.8}
 .result-chip{
   padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220;
 }
 .result-chip.W{background:var(--win)}
 .result-chip.D{background:var(--draw)}
 .result-chip.L{background:var(--loss)}
+.team-block{margin-top:6px}
+.team-title{font-weight:600;color:#9fb4c6;margin-bottom:4px}
 </style>
 
 </head>
@@ -175,7 +176,6 @@ let DATA = null;
   const res = await fetch(API);
   DATA = await res.json();
 
-  // header
   document.getElementById('updated').textContent =
     "Ažurirano: " + new Date(DATA.generatedAt).toLocaleString("hr-HR");
   document.getElementById('season').textContent = DATA.season + ". godina";
@@ -183,7 +183,6 @@ let DATA = null;
   document.getElementById('kpi-terms').textContent =
     DATA.seasonTotals.matchesPlayed + "/" + DATA.seasonTotals.fridays;
 
-  // sadržaj
   renderOutcomes(DATA.seasonTotals);
   renderAttendanceChart(DATA.players);
   renderWLChart(DATA.players);
@@ -232,16 +231,14 @@ function renderStreaks(players){
   }
 
   const mapped = players.map(p=>({
-    name:p.name,
-    w: calcStreak(p.form,"W"),
-    l: calcStreak(p.form,"L")
+    name:p.name, w:calcStreak(p.form,"W"), l:calcStreak(p.form,"L")
   }));
 
   const ws = mapped.filter(x=>x.w>0).sort((a,b)=>b.w-a.w).slice(0,5);
   const ls = mapped.filter(x=>x.l>0).sort((a,b)=>b.l-a.l).slice(0,5);
 
-  const wWrap = document.getElementById("ws");
-  const lWrap = document.getElementById("ls");
+  const wWrap=document.getElementById("ws");
+  const lWrap=document.getElementById("ls");
 
   wWrap.innerHTML="";
   ws.forEach(p=>{
@@ -305,57 +302,71 @@ function renderMonths(months){
   });
 }
 
-/* ==========================
-      MODAL — klik na igrača
-   ========================== */
+/* ============================================
+      ✅ MODAL — Opcija B (moja ekipa prva)
+   ============================================ */
 
 function openPlayerModal(name){
   const all = Array.isArray(DATA.matches) ? DATA.matches : [];
-  // filtriraj utakmice gdje igrač nastupa
-  let matches = all.filter(m => (m.black || []).includes(name) || (m.white || []).includes(name));
 
-  // najnoviji prvi (backend šalje uzlazno) → obrnemo
-  matches = matches.reverse().slice(0, 20);
+  let matches = all.filter(m => (m.black || []).includes(name) ||
+                                (m.white || []).includes(name));
 
-  document.getElementById("modalTitle").textContent = `${name} — zadnjih ${matches.length} nastupa`;
+  matches = matches.reverse().slice(0,20);
+
+  document.getElementById("modalTitle").textContent =
+    `${name} — zadnjih ${matches.length} nastupa`;
 
   const box = document.getElementById("modalMatches");
   box.innerHTML = "";
 
   if (matches.length === 0){
     const empty = document.createElement("div");
-    empty.className = "match-row";
-    empty.textContent = "Nema zabilježenih nastupa.";
+    empty.className="match-row";
+    empty.textContent="Nema zabilježenih nastupa.";
     box.appendChild(empty);
-  } else {
-    matches.forEach(m=>{
-      // rezultat (W/D/L) iz perspektive igrača
-      let result = "D";
-      const onBlack = m.black.includes(name);
-      if (m.winner === "crni" && onBlack) result = "W";
-      if (m.winner === "bijeli" && !onBlack) result = "W";
-      if (m.winner === "crni" && !onBlack) result = "L";
-      if (m.winner === "bijeli" && onBlack) result = "L";
-
-      const mySide = onBlack ? "Crni" : "Bijeli";
-      const myTeam = onBlack ? m.black : m.white;
-      const oppTeam = onBlack ? m.white : m.black;
-
-      const row = document.createElement("div");
-      row.className="match-row";
-      row.innerHTML = `
-        <span><strong>${m.date}</strong></span>
-        <span class="side">${mySide}</span>
-        <span>Rezultat: ${m.score}</span>
-        <span class="result-chip ${result}">${result}</span>
-        <div style="flex-basis:100%"></div>
-        <span>Moja ekipa: ${myTeam.join(", ")}</span>
-        <div style="flex-basis:100%"></div>
-        <span>Protiv: ${oppTeam.join(", ")}</span>
-      `;
-      box.appendChild(row);
-    });
+    return;
   }
+
+  matches.forEach(m=>{
+    const onBlack = m.black.includes(name);
+
+    const result =
+      m.winner === "neriješeno" ? "D" :
+      (m.winner === "crni"  && onBlack) ? "W" :
+      (m.winner === "bijeli" && !onBlack) ? "W" :
+      "L";
+
+    const myTeam = onBlack ? m.black : m.white;
+    const oppTeam = onBlack ? m.white : m.black;
+
+    const row=document.createElement("div");
+    row.className="match-row";
+
+    // boldaj ime unutar liste
+    const myTeamHtml = myTeam.map(p => p===name ? `<strong>${p}</strong>` : p).join(", ");
+    const oppHtml = oppTeam.join(", ");
+
+    row.innerHTML = `
+      <span><strong>${m.date}</strong></span>
+      <span>Rezultat: ${m.score}</span>
+      <span class="result-chip ${result}">${result}</span>
+
+      <div style="flex-basis:100%"></div>
+
+      <div class="team-block">
+        <div class="team-title">Ekipa ${onBlack ? "Crni" : "Bijeli"}</div>
+        <div>${myTeamHtml}</div>
+      </div>
+
+      <div class="team-block">
+        <div class="team-title">Ekipa ${onBlack ? "Bijeli" : "Crni"}</div>
+        <div>${oppHtml}</div>
+      </div>
+    `;
+
+    box.appendChild(row);
+  });
 
   document.getElementById("playerModal").style.display="flex";
 }
@@ -364,18 +375,14 @@ function closeModal(){
   document.getElementById("playerModal").style.display="none";
 }
 
-/* ==========================
-         CHARTS
-   ========================== */
+/* Charts */
 
 function renderAttendanceChart(players){
-  const top = [...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
+  const top=[...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
   new Chart(document.getElementById("chartAttendance"),{
     type:"bar",
-    data:{
-      labels:top.map(x=>x.name),
-      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]
-    },
+    data:{labels:top.map(x=>x.name),
+      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]},
     options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}
   });
 }
@@ -384,17 +391,14 @@ function renderWLChart(players){
   const top=[...players].sort((a,b)=>b.wins-a.wins).slice(0,10);
   new Chart(document.getElementById("chartWL"),{
     type:"bar",
-    data:{
-      labels:top.map(x=>x.name),
+    data:{labels:top.map(x=>x.name),
       datasets:[
         {label:"Pobjede",data:top.map(x=>x.wins)},
         {label:"Porazi",data:top.map(x=>x.losses)}
-      ]
-    }
+      ]}
   });
 }
-</script>
 
+</script>
 </body>
 </html>
-
