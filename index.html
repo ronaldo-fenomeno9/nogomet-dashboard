@@ -42,7 +42,6 @@ h1{font-size:20px;margin:0}
 .form-dot.draw{background:var(--draw)}
 .form-dot.loss{background:var(--loss)}
 .list{display:flex;flex-direction:column;gap:10px}
-.streak-box{background:var(--chip);padding:10px;border-radius:10px;border:1px solid #223141}
 </style>
 
 </head>
@@ -61,7 +60,7 @@ h1{font-size:20px;margin:0}
   <!-- KPIs -->
   <div class="grid grid-cols-3 kpis">
     <div class="kpi">
-      <div class="title">Ukupno u blagajni</div>
+      <div class="title">Ukupno u blagajni (sezona)</div>
       <div class="value" id="kpi-kitty">0.00 €</div>
       <div class="small" id="season"></div>
     </div>
@@ -82,19 +81,17 @@ h1{font-size:20px;margin:0}
     <div id="topForm" class="list"></div>
   </div>
 
-  <!-- ✅ Streakovi -->
+  <!-- ✅ STREAKOVI  -->
   <div class="card" style="margin-top:16px">
     <h2>Streakovi — Top 5</h2>
 
     <div class="grid grid-cols-2" style="gap:20px; margin-top:10px;">
-    
-      <!-- ✅ LEFT: TOP 5 W-STREAK -->
+
       <div>
         <h3 style="margin:0 0 10px 0; color:#cce1f1;">Najbolji W-streak</h3>
         <div id="streaksW" class="list"></div>
       </div>
 
-      <!-- ✅ RIGHT: TOP 5 L-STREAK -->
       <div>
         <h3 style="margin:0 0 10px 0; color:#cce1f1;">Najbolji L-streak</h3>
         <div id="streaksL" class="list"></div>
@@ -103,12 +100,24 @@ h1{font-size:20px;margin:0}
     </div>
   </div>
 
+  <div class="grid grid-cols-2" style="margin-top:16px">
+    <div class="card">
+      <h2>Dolaznost po igračima (Top 10)</h2>
+      <canvas id="chartAttendance" height="120"></canvas>
+    </div>
+    <div class="card">
+      <h2>Pobjede / Porazi (Top 10)</h2>
+      <canvas id="chartWL" height="120"></canvas>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:16px">
     <h2>Master tablica</h2>
     <table class="table" id="tblPlayers">
       <thead>
         <tr>
-          <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th><th>Dolaznost</th><th>Uplate (€)</th><th>Forma</th>
+          <th>Igrač</th><th>Utakmice</th><th>W</th><th>D</th><th>L</th>
+          <th>Bodovi</th><th>Dolaznost</th><th>Uplate (€)</th><th>Forma</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -123,7 +132,7 @@ h1{font-size:20px;margin:0}
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbxOvVJpNioiQ5BAwdry5wRrcLffiVkyXztSYTa4wE8BNQ65lgiI1nt5RzKoDYIRfyVMFw/exec"; 
+const API = "https://script.google.com/macros/s/AKfycbxOvVJpNioiQ5BAwdry5wRrcLffiVkyXztSYTa4wE8BNQ65lgiI1nt5RzKoDYIRfyVMFw/exec";
 
 let DATA = null;
 
@@ -134,11 +143,10 @@ let DATA = null;
   document.getElementById('updated').textContent =
     "Ažurirano: " + new Date(DATA.generatedAt).toLocaleString("hr-HR");
 
-  const year = new Date().getFullYear();
-  document.getElementById('season').textContent = year + " godina";
+  const currentYear = new Date().getFullYear();
+  document.getElementById('season').textContent = currentYear + " godina";
 
   document.getElementById('kpi-kitty').textContent = euro(DATA.kitty);
-
   document.getElementById('kpi-terms').textContent =
     DATA.seasonTotals.matchesPlayed + "/" + DATA.seasonTotals.fridays;
 
@@ -161,7 +169,6 @@ function renderOutcomes(t){
   `;
 }
 
-/* ✅ Najbolja forma */
 function renderTopForm(players){
   const scored = players.map(p=>{
     const score = p.form.reduce((acc,ch)=>{
@@ -185,43 +192,28 @@ function renderTopForm(players){
   });
 }
 
-/* ✅ Streakovi (Top 5) */
 function renderStreaks(players){
   function streakCalc(form){
     let w=0,l=0;
 
-    // W-streak
     for(let r of [...form].reverse()){
-      if(r==="W") w++;
-      else break;
+      if(r==="W") w++; else break;
     }
-    // L-streak
     for(let r of [...form].reverse()){
-      if(r==="L") l++;
-      else break;
+      if(r==="L") l++; else break;
     }
+
     return { win:w, lose:l };
   }
 
-  // izračun za sve igrače
   const arr = players.map(p=>{
     const s = streakCalc(p.form);
     return { name:p.name, win:s.win, lose:s.lose };
   });
 
-  // ✅ TOP 5 WIN streak
-  const topW = [...arr]
-      .filter(x => x.win > 0)
-      .sort((a,b)=> b.win - a.win)
-      .slice(0,5);
+  const topW = arr.filter(x=>x.win>0).sort((a,b)=>b.win-a.win).slice(0,5);
+  const topL = arr.filter(x=>x.lose>0).sort((a,b)=>b.lose-a.lose).slice(0,5);
 
-  // ✅ TOP 5 LOSE streak
-  const topL = [...arr]
-      .filter(x => x.lose > 0)
-      .sort((a,b)=> b.lose - a.lose)
-      .slice(0,5);
-
-  // render
   const wrapW = document.getElementById("streaksW");
   const wrapL = document.getElementById("streaksL");
 
@@ -230,26 +222,19 @@ function renderStreaks(players){
 
   topW.forEach(p=>{
     const div = document.createElement("div");
-    div.className = "streak-box";
-    div.innerHTML = `
-      <strong>${p.name}</strong><br>
-      ✅ W-streak: ${p.win}
-    `;
+    div.className = "kpi";
+    div.innerHTML = `<strong>${p.name}</strong><br>✅ W-streak: ${p.win}`;
     wrapW.appendChild(div);
   });
 
   topL.forEach(p=>{
     const div = document.createElement("div");
-    div.className = "streak-box";
-    div.innerHTML = `
-      <strong>${p.name}</strong><br>
-      ❌ L-streak: ${p.lose}
-    `;
+    div.className = "kpi";
+    div.innerHTML = `<strong>${p.name}</strong><br>❌ L-streak: ${p.lose}`;
     wrapL.appendChild(div);
   });
 }
 
-/* Originalni dijelovi – ništa se ne mijenja */
 function renderPlayersTable(players){
   players = [...players].sort((a,b)=> b.points - a.points);
   const tb = document.querySelector("#tblPlayers tbody");
@@ -325,5 +310,3 @@ function renderWLChart(players){
 
 </body>
 </html>
-
-
