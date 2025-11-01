@@ -62,8 +62,8 @@ h1{font-size:20px;margin:0}
 }
 .close-btn:hover{color:#fff}
 .match-row{
-  padding:10px 0;border-bottom:1px solid #1f2a36;font-size:14px;
-  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:12px 0;border-bottom:1px solid #1f2a36;font-size:15px;
+  display:flex;flex-direction:column;gap:6px;
 }
 .result-chip{
   padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220;
@@ -71,8 +71,26 @@ h1{font-size:20px;margin:0}
 .result-chip.W{background:var(--win)}
 .result-chip.D{background:var(--draw)}
 .result-chip.L{background:var(--loss)}
-.team-block{margin-top:6px}
-.team-title{font-weight:600;color:#9fb4c6;margin-bottom:4px}
+
+.team-block{
+  margin-top:6px;
+  padding:8px 10px;
+  background:#1a2533;
+  border-radius:8px;
+  border:1px solid #223141;
+}
+.team-title{
+  font-size:13px;
+  color:#9fb4c6;
+  margin-bottom:4px;
+}
+.team-player{
+  margin-right:6px;
+}
+.team-player.bold-green{
+  font-weight:700;
+  color:var(--win);
+}
 </style>
 
 </head>
@@ -194,6 +212,110 @@ let DATA = null;
 
 function euro(x){ return (Number(x)||0).toFixed(2) + " €"; }
 
+function renderPlayersTable(players){
+  const tb=document.querySelector("#tblPlayers tbody");
+  tb.innerHTML="";
+  players.forEach(p=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td class="clickable" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</td>
+      <td>${p.played}</td>
+      <td>${p.wins}</td>
+      <td>${p.draws}</td>
+      <td>${p.losses}</td>
+      <td>${p.points}</td>
+      <td>${p.attendancePct.toFixed(1)}%</td>
+      <td>${euro(p.amountTotal)}</td>
+      <td>${renderForm(p.form)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function renderMonths(months){
+  const wrap=document.getElementById("months");
+  wrap.innerHTML="";
+  months.forEach(m=>{
+    const div=document.createElement("div");
+    div.className="kpi";
+    div.innerHTML=`
+      <div class="title">${m.month}</div>
+      <div class="value">${m.matchesPlayed}/${m.fridays} termina</div>
+      <div class="badge">U blagajni: ${euro(m.kitty)}</div>
+      <div class="badge">Top 3: ${m.top3.map(x=>x.name+" ("+x.points+")").join(", ")}</div>
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+/* ==========================
+      MODAL — klik na igrača
+   ========================== */
+
+function openPlayerModal(name){
+  const all = Array.isArray(DATA.matches) ? DATA.matches : [];
+  let matches = all.filter(m => (m.black || []).includes(name) || (m.white || []).includes(name));
+  matches = matches.reverse().slice(0, 20);
+
+  document.getElementById("modalTitle").textContent = `${name} — zadnjih ${matches.length} nastupa`;
+
+  const box = document.getElementById("modalMatches");
+  box.innerHTML = "";
+
+  if (matches.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "match-row";
+    empty.textContent = "Nema zabilježenih nastupa.";
+    box.appendChild(empty);
+  } else {
+    matches.forEach(m=>{
+      const onBlack = m.black.includes(name);
+      let result = "D";
+      if (m.winner === "crni" && onBlack) result="W";
+      if (m.winner === "bijeli" && !onBlack) result="W";
+      if (m.winner === "crni" && !onBlack) result="L";
+      if (m.winner === "bijeli" && onBlack) result="L";
+
+      const row = document.createElement("div");
+      row.className="match-row";
+
+      row.innerHTML = `
+        <div><strong>${m.date}</strong> — ${m.score} — <span class="result-chip ${result}">${result}</span></div>
+
+        <div class="team-block">
+          <div class="team-title">Ekipa crni</div>
+          <div>${m.black.map(p => 
+            p === name 
+              ? `<span class="team-player bold-green">${p}</span>`
+              : `<span class="team-player">${p}</span>`
+          ).join("")}</div>
+        </div>
+
+        <div class="team-block">
+          <div class="team-title">Ekipa bijeli</div>
+          <div>${m.white.map(p => 
+            p === name 
+              ? `<span class="team-player bold-green">${p}</span>`
+              : `<span class="team-player">${p}</span>`
+          ).join("")}</div>
+        </div>
+      `;
+
+      box.appendChild(row);
+    });
+  }
+
+  document.getElementById("playerModal").style.display="flex";
+}
+
+function closeModal(){
+  document.getElementById("playerModal").style.display="none";
+}
+
+/* ==========================
+         CHARTS
+   ========================== */
+
 function renderOutcomes(t){
   document.getElementById('kpi-outcomes').innerHTML = `
     <span class="badge">Crni pobjede: ${t.blackWins}</span>
@@ -231,14 +353,16 @@ function renderStreaks(players){
   }
 
   const mapped = players.map(p=>({
-    name:p.name, w:calcStreak(p.form,"W"), l:calcStreak(p.form,"L")
+    name:p.name,
+    w: calcStreak(p.form,"W"),
+    l: calcStreak(p.form,"L")
   }));
 
   const ws = mapped.filter(x=>x.w>0).sort((a,b)=>b.w-a.w).slice(0,5);
   const ls = mapped.filter(x=>x.l>0).sort((a,b)=>b.l-a.l).slice(0,5);
 
-  const wWrap=document.getElementById("ws");
-  const lWrap=document.getElementById("ls");
+  const wWrap = document.getElementById("ws");
+  const lWrap = document.getElementById("ls");
 
   wWrap.innerHTML="";
   ws.forEach(p=>{
@@ -266,123 +390,14 @@ function renderForm(list){
     `</div>`;
 }
 
-function renderPlayersTable(players){
-  const tb=document.querySelector("#tblPlayers tbody");
-  tb.innerHTML="";
-  players.forEach(p=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td class="clickable" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</td>
-      <td>${p.played}</td>
-      <td>${p.wins}</td>
-      <td>${p.draws}</td>
-      <td>${p.losses}</td>
-      <td>${p.points}</td>
-      <td>${p.attendancePct.toFixed(1)}%</td>
-      <td>${euro(p.amountTotal)}</td>
-      <td>${renderForm(p.form)}</td>
-    `;
-    tb.appendChild(tr);
-  });
-}
-
-function renderMonths(months){
-  const wrap=document.getElementById("months");
-  wrap.innerHTML="";
-  months.forEach(m=>{
-    const div=document.createElement("div");
-    div.className="kpi";
-    div.innerHTML=`
-      <div class="title">${m.month}</div>
-      <div class="value">${m.matchesPlayed}/${m.fridays} termina</div>
-      <div class="badge">U blagajni: ${euro(m.kitty)}</div>
-      <div class="badge">Top 3: ${m.top3.map(x=>x.name+" ("+x.points+")").join(", ")}</div>
-    `;
-    wrap.appendChild(div);
-  });
-}
-
-/* ============================================
-      ✅ MODAL — Opcija B (moja ekipa prva)
-   ============================================ */
-
-function openPlayerModal(name){
-  const all = Array.isArray(DATA.matches) ? DATA.matches : [];
-
-  let matches = all.filter(m => (m.black || []).includes(name) ||
-                                (m.white || []).includes(name));
-
-  matches = matches.reverse().slice(0,20);
-
-  document.getElementById("modalTitle").textContent =
-    `${name} — zadnjih ${matches.length} nastupa`;
-
-  const box = document.getElementById("modalMatches");
-  box.innerHTML = "";
-
-  if (matches.length === 0){
-    const empty = document.createElement("div");
-    empty.className="match-row";
-    empty.textContent="Nema zabilježenih nastupa.";
-    box.appendChild(empty);
-    return;
-  }
-
-  matches.forEach(m=>{
-    const onBlack = m.black.includes(name);
-
-    const result =
-      m.winner === "neriješeno" ? "D" :
-      (m.winner === "crni"  && onBlack) ? "W" :
-      (m.winner === "bijeli" && !onBlack) ? "W" :
-      "L";
-
-    const myTeam = onBlack ? m.black : m.white;
-    const oppTeam = onBlack ? m.white : m.black;
-
-    const row=document.createElement("div");
-    row.className="match-row";
-
-    // boldaj ime unutar liste
-    const myTeamHtml = myTeam.map(p => p===name ? `<strong>${p}</strong>` : p).join(", ");
-    const oppHtml = oppTeam.join(", ");
-
-    row.innerHTML = `
-      <span><strong>${m.date}</strong></span>
-      <span>Rezultat: ${m.score}</span>
-      <span class="result-chip ${result}">${result}</span>
-
-      <div style="flex-basis:100%"></div>
-
-      <div class="team-block">
-        <div class="team-title">Ekipa ${onBlack ? "Crni" : "Bijeli"}</div>
-        <div>${myTeamHtml}</div>
-      </div>
-
-      <div class="team-block">
-        <div class="team-title">Ekipa ${onBlack ? "Bijeli" : "Crni"}</div>
-        <div>${oppHtml}</div>
-      </div>
-    `;
-
-    box.appendChild(row);
-  });
-
-  document.getElementById("playerModal").style.display="flex";
-}
-
-function closeModal(){
-  document.getElementById("playerModal").style.display="none";
-}
-
-/* Charts */
-
 function renderAttendanceChart(players){
-  const top=[...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
+  const top = [...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
   new Chart(document.getElementById("chartAttendance"),{
     type:"bar",
-    data:{labels:top.map(x=>x.name),
-      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]},
+    data:{
+      labels:top.map(x=>x.name),
+      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]
+    },
     options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}
   });
 }
@@ -391,14 +406,16 @@ function renderWLChart(players){
   const top=[...players].sort((a,b)=>b.wins-a.wins).slice(0,10);
   new Chart(document.getElementById("chartWL"),{
     type:"bar",
-    data:{labels:top.map(x=>x.name),
+    data:{
+      labels:top.map(x=>x.name),
       datasets:[
         {label:"Pobjede",data:top.map(x=>x.wins)},
         {label:"Porazi",data:top.map(x=>x.losses)}
-      ]}
+      ]
+    }
   });
 }
-
 </script>
+
 </body>
 </html>
