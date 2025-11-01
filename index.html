@@ -13,6 +13,7 @@
 :root{
   --bg:#0f1720; --panel:#121a24; --muted:#8aa0b2; --text:#e6eef6; --accent:#3dd6ff;
   --win:#22c55e; --draw:#eab308; --loss:#ef4444; --card:#101823; --chip:#1b2633;
+  --hint:#2a3a4d;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui}
@@ -32,7 +33,6 @@ h1{font-size:20px;margin:0}
 .kpi{background:var(--card);border:1px solid #1e2a38;border-radius:14px;padding:14px}
 .kpi .title{color:var(--muted);font-size:12px;margin-bottom:6px}
 .kpi .value{font-weight:700;font-size:24px}
-.kpi.clickable{cursor:pointer}
 .badge{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:#cfe4f3;border:1px solid #223141;border-radius:999px;padding:4px 10px;font-size:12px}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{padding:10px 8px;border-bottom:1px solid #1f2a36;font-size:14px}
@@ -45,8 +45,13 @@ h1{font-size:20px;margin:0}
 .form-dot.draw{background:var(--draw)}
 .form-dot.loss{background:var(--loss)}
 .list{display:flex;flex-direction:column;gap:10px}
-ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.pill{background:var(--card);border:1px solid #1e2a38;border-radius:12px;padding:10px}
+.duo-row{display:flex;gap:16px;flex-wrap:wrap}
+.duo-pill{background:var(--card);border:1px solid #1e2a38;border-radius:12px;padding:10px 12px;font-size:14px}
+
+/* clickable look for months */
+.clickable-card{cursor:pointer;position:relative}
+.clickable-card:hover{border-color:#2a3a4d;background:rgba(42,58,77,0.15)}
+.hint{display:inline-block;background:var(--hint);border:1px solid #30465f;color:#cfe4f3;border-radius:999px;padding:3px 8px;font-size:11px;margin-left:8px}
 
 /* MODALS */
 .modal-bg{
@@ -56,33 +61,33 @@ ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;g
 }
 .modal{
   background:var(--panel);border-radius:14px;
-  width:90%;max-width:820px;max-height:80vh;overflow-y:auto;
+  width:90%;max-width:780px;max-height:80vh;overflow-y:auto;
   padding:20px;border:1px solid #1e2a38;
 }
 .modal h3{margin:0 0 12px 0}
-.close-btn{
-  float:right;color:#aaa;cursor:pointer;font-size:20px;
-}
+.close-btn{float:right;color:#aaa;cursor:pointer;font-size:20px}
 .close-btn:hover{color:#fff}
-.match-row{
-  padding:10px 0;border-bottom:1px solid #1f2a36;font-size:14px;
-  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
-}
-.result-chip{
-  padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220;
-}
+.match-row{padding:12px 0;border-bottom:1px solid #1f2a36;font-size:14px}
+.pair-line{display:flex;gap:8px;align-items:center}
+.result-chip{padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220}
 .result-chip.W{background:var(--win)}
 .result-chip.D{background:var(--draw)}
 .result-chip.L{background:var(--loss)}
-.player-green{font-weight:700;color:#22c55e}
-.mono{font-variant-numeric:tabular-nums}
+.team-block{margin-top:8px}
+.team-title{font-size:12px;color:#9fb4c6;margin-bottom:4px}
+.player-name{margin-right:6px}
+.player-me{font-weight:700;color:#22c55e}
+
+/* layout: Best form left, Duo right */
+@media(min-width:900px){
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+}
 </style>
 
 </head>
 <body>
 
 <div class="container">
-
   <div class="header">
     <div class="logo"></div>
     <div>
@@ -121,38 +126,23 @@ ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;g
     </div>
   </div>
 
-  <!-- Forma + Duo u istom redu (kao grafovi) -->
-  <div class="grid grid-cols-2" style="margin-top:16px">
+  <!-- Best form + Duo -->
+  <div class="two-col" style="margin-top:16px">
     <div class="card">
       <h2>Najbolja forma — Top 5</h2>
       <div id="topForm" class="list"></div>
     </div>
     <div class="card">
       <h2>Duo — Top 3</h2>
-      <div class="grid grid-cols-2">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
-          <h3 style="margin:0 0 8px">Najbolji</h3>
-          <ul id="duoBest" class="clean"></ul>
+          <h3 style="margin:0 0 10px">Najbolji</h3>
+          <div id="duoBest" class="list"></div>
         </div>
         <div>
-          <h3 style="margin:0 0 8px">Najlošiji</h3>
-          <ul id="duoWorst" class="clean"></ul>
+          <h3 style="margin:0 0 10px">Najlošiji</h3>
+          <div id="duoWorst" class="list"></div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Streakovi -->
-  <div class="card" style="margin-top:16px">
-    <h2>Streakovi — Top 5</h2>
-    <div class="grid grid-cols-2">
-      <div>
-        <h3 style="margin:0 0 8px">W-streak</h3>
-        <div id="ws" class="list"></div>
-      </div>
-      <div>
-        <h3 style="margin:0 0 8px">L-streak</h3>
-        <div id="ls" class="list"></div>
       </div>
     </div>
   </div>
@@ -172,8 +162,8 @@ ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;g
 
   <!-- Zadnjih 5 termina -->
   <div class="card" style="margin-top:16px">
-    <h2>Zadnjih 5 termina</h2>
-    <div id="last5" class="list"></div>
+    <h2>Zadnjih 5 odigranih termina</h2>
+    <div id="recent5" class="list"></div>
   </div>
 
   <!-- Mjesečni obračuni -->
@@ -197,14 +187,7 @@ ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;g
   <div class="modal">
     <span class="close-btn" onclick="closeModal('monthModal')">✖</span>
     <h3 id="monthTitle"></h3>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Igrač</th><th>W</th><th>D</th><th>L</th><th>Bodovi</th><th>Uplata (€)</th>
-        </tr>
-      </thead>
-      <tbody id="monthTable"></tbody>
-    </table>
+    <div id="monthBody"></div>
   </div>
 </div>
 
@@ -216,7 +199,6 @@ let DATA = null;
   const res = await fetch(API);
   DATA = await res.json();
 
-  // header
   document.getElementById('updated').textContent =
     "Ažurirano: " + new Date(DATA.generatedAt).toLocaleString("hr-HR");
   document.getElementById('season').textContent = DATA.season + ". godina";
@@ -224,20 +206,14 @@ let DATA = null;
   document.getElementById('kpi-terms').textContent =
     DATA.seasonTotals.matchesPlayed + "/" + DATA.seasonTotals.fridays;
 
-  // sadržaj
   renderOutcomes(DATA.seasonTotals);
   renderAttendanceChart(DATA.players);
   renderWLChart(DATA.players);
   renderTopForm(DATA.players);
-  renderStreaks(DATA.players);
+  renderDuos(DATA.duos);
   renderPlayersTable(DATA.players);
+  renderRecent5(DATA.recent || []);
   renderMonths(DATA.months);
-
-  // Duo (iz DATA.matches)
-  renderDuos(DATA.matches);
-
-  // Zadnjih 5 termina
-  renderLast5(DATA.matches);
 })();
 
 function euro(x){ return (Number(x)||0).toFixed(2) + " €"; }
@@ -250,76 +226,54 @@ function renderOutcomes(t){
   `;
 }
 
-/* Najbolja forma */
+/* Najbolja forma – BEZ bodova */
 function renderTopForm(players){
   const scored = players.map(p=>{
     const score = p.form.reduce((acc,ch)=> acc+(ch==="W"?3:ch==="D"?1:0),0);
     return { name:p.name, score, form:p.form };
-  });
-  const top5 = scored.sort((a,b)=>b.score-a.score).slice(0,5);
+  }).sort((a,b)=>b.score-a.score).slice(0,5);
 
   const wrap = document.getElementById("topForm");
   wrap.innerHTML = "";
+  scored.forEach(p=>{
+    const row = document.createElement("div");
+    row.className = "duo-pill";
+    row.innerHTML = `<strong>${p.name}</strong> &nbsp; ${renderForm(p.form)}`;
+    wrap.appendChild(row);
+  });
+}
 
-  top5.forEach(p=>{
+/* Duos */
+function renderDuos(duos){
+  const bestWrap = document.getElementById("duoBest");
+  const worstWrap = document.getElementById("duoWorst");
+  bestWrap.innerHTML = ""; worstWrap.innerHTML = "";
+
+  (duos?.best || []).forEach(d=>{
     const div = document.createElement("div");
-    div.className="pill";
-    div.innerHTML = `<strong>${p.name}</strong> — ${p.score} bodova &nbsp; ${renderForm(p.form)}`;
-    wrap.appendChild(div);
+    div.className = "duo-pill";
+    div.innerHTML = `${d.a} — ${d.b} &nbsp; <span class="result-chip W">W</span> × ${d.wins}`;
+    bestWrap.appendChild(div);
+  });
+  (duos?.worst || []).forEach(d=>{
+    const div = document.createElement("div");
+    div.className = "duo-pill";
+    div.innerHTML = `${d.a} — ${d.b} &nbsp; <span class="result-chip L">L</span> × ${d.losses}`;
+    worstWrap.appendChild(div);
   });
 }
 
-/* Streakovi */
-function renderStreaks(players){
-  function calcStreak(arr, type){
-    let curr = 0;
-    for (let i = arr.length - 1; i >= 0; i--){
-      if (arr[i] === type) curr++;
-      else break;
-    }
-    return curr;
-  }
-
-  const mapped = players.map(p=>({
-    name:p.name,
-    w: calcStreak(p.form,"W"),
-    l: calcStreak(p.form,"L")
-  }));
-
-  const ws = mapped.filter(x=>x.w>0).sort((a,b)=>b.w-a.w).slice(0,5);
-  const ls = mapped.filter(x=>x.l>0).sort((a,b)=>b.l-a.l).slice(0,5);
-
-  const wWrap = document.getElementById("ws");
-  const lWrap = document.getElementById("ls");
-
-  wWrap.innerHTML="";
-  ws.forEach(p=>{
-    const div=document.createElement("div");
-    div.className="badge";
-    div.innerHTML = `✅ W-streak: ${p.w} — ${p.name}`;
-    wWrap.appendChild(div);
-  });
-
-  lWrap.innerHTML="";
-  ls.forEach(p=>{
-    const div=document.createElement("div");
-    div.className="badge";
-    div.innerHTML = `❌ L-streak: ${p.l} — ${p.name}`;
-    lWrap.appendChild(div);
-  });
-}
-
-/* Forme u boji */
+/* Forma (W/D/L pillovi) */
 function renderForm(list){
   return `<span class="form-strip">` +
     list.map(ch=>{
       const cls = ch==="W"?"win":(ch==="D"?"draw":"loss");
       return `<span class="form-dot ${cls}">${ch}</span>`;
     }).join("") +
-    `</span>`;
+  `</span>`;
 }
 
-/* Master */
+/* Master tablica + klik na igrača */
 function renderPlayersTable(players){
   const tb=document.querySelector("#tblPlayers tbody");
   tb.innerHTML="";
@@ -340,63 +294,57 @@ function renderPlayersTable(players){
   });
 }
 
-/* Zadnjih 5 termina */
-function renderLast5(matches){
-  const wrap = document.getElementById("last5");
-  wrap.innerHTML = "";
-  const list = [...(matches||[])].slice(-5).reverse();
-  if (!list.length){
-    const d = document.createElement("div");
-    d.className = "pill";
-    d.textContent = "Nema odigranih termina.";
-    wrap.appendChild(d);
-    return;
-  }
+/* Zadnjih 5 termina – prikaz svih igrača (uklj. vanjske) */
+function renderRecent5(list){
+  const box = document.getElementById("recent5");
+  box.innerHTML = "";
   list.forEach(m=>{
-    const el = document.createElement("div");
-    el.className = "pill";
-    el.innerHTML = `
-      <div><strong>${m.date}</strong> — Rezultat: <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}</div>
-      <div class="small" style="margin-top:6px">
-        <span>Crni: ${m.black.join(", ")}</span><br/>
-        <span>Bijeli: ${m.white.join(", ")}</span>
+    const row = document.createElement("div");
+    row.className = "match-row";
+    row.innerHTML = `
+      <div class="pair-line">
+        <strong>${m.date}</strong>
+        <span>Rezultat: ${m.score}</span>
+        ${renderChipFromWinner(m.winner)}
+      </div>
+      <div class="team-block">
+        <div class="team-title">Ekipa Crni</div>
+        <div>${m.black.join(", ")}</div>
+      </div>
+      <div class="team-block">
+        <div class="team-title">Ekipa Bijeli</div>
+        <div>${m.white.join(", ")}</div>
       </div>
     `;
-    wrap.appendChild(el);
+    box.appendChild(row);
   });
 }
-function winnerBadge(w){
-  if (w==="crni") return `<span class="badge">Pobijedili: Crni</span>`;
-  if (w==="bijeli") return `<span class="badge">Pobijedili: Bijeli</span>`;
-  return `<span class="badge">Neriješeno</span>`;
-}
 
-/* Mjeseci (klik) */
+/* Mjesečni obračuni – kartice s hintom klik */
 function renderMonths(months){
   const wrap=document.getElementById("months");
   wrap.innerHTML="";
   months.forEach(m=>{
     const div=document.createElement("div");
-    div.className="kpi clickable";
-    div.onclick = ()=> openMonthModal(m);
+    div.className="kpi clickable-card";
+    div.onclick = () => openMonthModal(m);
     div.innerHTML=`
       <div class="title">${m.month}</div>
       <div class="value">${m.matchesPlayed}/${m.fridays} termina</div>
       <div class="badge">U blagajni: ${euro(m.kitty)}</div>
       <div class="badge">Top 3: ${m.top3.map(x=>x.name+" ("+x.points+")").join(", ")}</div>
+      <span class="hint">klikni za detalje</span>
     `;
     wrap.appendChild(div);
   });
 }
 
-/* ==========================
-      MODAL — klik na igrača
-   ========================== */
+/* ========= MODALI ========= */
 
 function openPlayerModal(name){
   const all = Array.isArray(DATA.matches) ? DATA.matches : [];
-  let matches = all.filter(m => (m.black || []).includes(name) || (m.white || []).includes(name));
-  matches = matches.reverse().slice(0, 20);
+  let matches = all.filter(m => (m.black||[]).includes(name) || (m.white||[]).includes(name));
+  matches = matches.sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 20);
 
   document.getElementById("modalTitle").textContent = `${name} — zadnjih ${matches.length} nastupa`;
 
@@ -410,23 +358,32 @@ function openPlayerModal(name){
     box.appendChild(empty);
   } else {
     matches.forEach(m=>{
-      let result = "D";
       const onBlack = m.black.includes(name);
+      let result = "D";
       if (m.winner === "crni" && onBlack) result = "W";
       if (m.winner === "bijeli" && !onBlack) result = "W";
       if (m.winner === "crni" && !onBlack) result = "L";
       if (m.winner === "bijeli" && onBlack) result = "L";
 
+      const blackHTML = m.black.map(p => p===name ? `<span class="player-name player-me">${p}</span>` : `<span class="player-name">${p}</span>`).join("");
+      const whiteHTML = m.white.map(p => p===name ? `<span class="player-name player-me">${p}</span>` : `<span class="player-name">${p}</span>`).join("");
+
       const row = document.createElement("div");
       row.className="match-row";
       row.innerHTML = `
-        <span><strong>${m.date}</strong></span>
-        <span>Rezultat: <span class="mono">${m.score}</span></span>
-        <span class="result-chip ${result}">${result}</span>
-        <div style="flex-basis:100%"></div>
-        <div><strong>Ekipa Crni:</strong> ${formatTeam(m.black, name)}</div>
-        <div style="flex-basis:100%"></div>
-        <div><strong>Ekipa Bijeli:</strong> ${formatTeam(m.white, name)}</div>
+        <div class="pair-line">
+          <strong>${m.date}</strong>
+          <span>Rezultat: ${m.score}</span>
+          <span class="result-chip ${result}">${result}</span>
+        </div>
+        <div class="team-block">
+          <div class="team-title">Ekipa Crni</div>
+          <div>${blackHTML}</div>
+        </div>
+        <div class="team-block">
+          <div class="team-title">Ekipa Bijeli</div>
+          <div>${whiteHTML}</div>
+        </div>
       `;
       box.appendChild(row);
     });
@@ -435,123 +392,60 @@ function openPlayerModal(name){
   document.getElementById("playerModal").style.display="flex";
 }
 
-function formatTeam(arr, highlightName){
-  return (arr||[]).map(p => p===highlightName ? `<span class="player-green">${p}</span>` : p).join(", ");
-}
+function openMonthModal(m){
+  document.getElementById("monthTitle").textContent = `Obračun — ${m.month}`;
+  const body = document.getElementById("monthBody");
+  body.innerHTML = "";
 
-function closeModal(id){
-  document.getElementById(id).style.display="none";
-}
+  // sortiranje po iznosu uplate (desc), kako si tražio
+  const rows = Object.values(m.table).sort((a,b)=>b.amount-a.amount);
 
-/* ==========================
-         MJESEČNI MODAL
-   ========================== */
-function openMonthModal(monthObj){
-  document.getElementById("monthTitle").textContent = `${monthObj.month} — mjesečni obračun`;
-  const tb = document.getElementById("monthTable");
-  tb.innerHTML = "";
-
-  const rows = Object.values(monthObj.table || {});
-  rows.sort((a,b)=> (b.points||0) - (a.points||0)); // po bodovima
-
-  rows.forEach(r=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.name}</td>
-      <td>${r.W}</td>
-      <td>${r.D}</td>
-      <td>${r.L}</td>
-      <td>${r.points}</td>
-      <td>${euro(r.amount)}</td>
-    `;
-    tb.appendChild(tr);
-  });
+  const table = document.createElement("table");
+  table.className = "table";
+  table.innerHTML = `
+    <thead><tr>
+      <th>Igrač</th><th>Porazi (L)</th><th>Neriješeno (D)</th><th>Uplata</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(p=>`
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.losses}</td>
+          <td>${p.draws}</td>
+          <td>${euro(p.amount)}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+  body.appendChild(table);
 
   document.getElementById("monthModal").style.display="flex";
 }
 
-/* ==========================
-            DUO
-   ========================== */
-function renderDuos(matches){
-  const bestUL  = document.getElementById("duoBest");
-  const worstUL = document.getElementById("duoWorst");
-  bestUL.innerHTML = ""; worstUL.innerHTML = "";
+function closeModal(id){ document.getElementById(id).style.display="none"; }
 
-  const pairs = {}; // key -> {a,b,w:0,l:0}
-  const addPair = (a,b,field)=>{
-    const [x,y] = [a,b].sort();
-    const k = x+"|"+y;
-    if (!pairs[k]) pairs[k] = {a:x,b:y,w:0,l:0};
-    pairs[k][field] += 1;
-  };
-
-  (matches||[]).forEach(m=>{
-    const makePairs = (team)=> {
-      for(let i=0;i<team.length;i++){
-        for(let j=i+1;j<team.length;j++){
-          const a=team[i], b=team[j];
-          if (a && b) { // sigurnost
-            if (m.winner==="crni" && team===m.black) addPair(a,b,"w");
-            else if (m.winner==="bijeli" && team===m.white) addPair(a,b,"w");
-            else if (m.winner==="crni" && team===m.white) addPair(a,b,"l");
-            else if (m.winner==="bijeli" && team===m.black) addPair(a,b,"l");
-            // neriješeno -> ništa
-          }
-        }
-      }
-    };
-    makePairs(m.black);
-    makePairs(m.white);
-  });
-
-  const arr = Object.values(pairs);
-  const topBest  = [...arr].sort((a,b)=> b.w - a.w || a.l - b.l).slice(0,3);
-  const topWorst = [...arr].sort((a,b)=> b.l - a.l || a.w - b.w).slice(0,3);
-
-  if (topBest.length===0) bestUL.innerHTML = "<li class='small'>Nema podataka.</li>";
-  else topBest.forEach(p=>{
-    const li = document.createElement("li");
-    li.className = "pill";
-    li.textContent = `${p.a} — ${p.b} — ${p.w} pobjede`;
-    bestUL.appendChild(li);
-  });
-
-  if (topWorst.length===0) worstUL.innerHTML = "<li class='small'>Nema podataka.</li>";
-  else topWorst.forEach(p=>{
-    const li = document.createElement("li");
-    li.className = "pill";
-    li.textContent = `${p.a} — ${p.b} — ${p.l} poraza`;
-    worstUL.appendChild(li);
-  });
+function renderChipFromWinner(w){
+  if (w === "crni") return `<span class="result-chip W">W (Crni)</span>`;
+  if (w === "bijeli") return `<span class="result-chip W">W (Bijeli)</span>`;
+  return `<span class="result-chip D">D</span>`;
 }
 
-/* ==========================
-         CHARTS
-   ========================== */
+/* ========= CHARTS ========= */
+
 function renderAttendanceChart(players){
   const top = [...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
   new Chart(document.getElementById("chartAttendance"),{
     type:"bar",
-    data:{
-      labels:top.map(x=>x.name),
-      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]
-    },
+    data:{ labels:top.map(x=>x.name), datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}] },
     options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}
   });
 }
-
 function renderWLChart(players){
   const top=[...players].sort((a,b)=>b.wins-a.wins).slice(0,10);
   new Chart(document.getElementById("chartWL"),{
     type:"bar",
-    data:{
-      labels:top.map(x=>x.name),
-      datasets:[
-        {label:"Pobjede",data:top.map(x=>x.wins)},
-        {label:"Porazi",data:top.map(x=>x.losses)}
-      ]
-    }
+    data:{ labels:top.map(x=>x.name),
+      datasets:[{label:"Pobjede",data:top.map(x=>x.wins)},{label:"Porazi",data:top.map(x=>x.losses)}] }
   });
 }
 </script>
