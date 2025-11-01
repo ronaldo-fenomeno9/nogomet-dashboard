@@ -85,17 +85,21 @@ h1{font-size:20px;margin:0}
   <!-- ✅ Streakovi -->
   <div class="card" style="margin-top:16px">
     <h2>Streakovi — Top 5</h2>
-    <div id="streaks" class="list"></div>
-  </div>
 
-  <div class="grid grid-cols-2" style="margin-top:16px">
-    <div class="card">
-      <h2>Dolaznost po igračima (Top 10)</h2>
-      <canvas id="chartAttendance" height="120"></canvas>
-    </div>
-    <div class="card">
-      <h2>Pobjede / Porazi (Top 10)</h2>
-      <canvas id="chartWL" height="120"></canvas>
+    <div class="grid grid-cols-2" style="gap:20px; margin-top:10px;">
+    
+      <!-- ✅ LEFT: TOP 5 W-STREAK -->
+      <div>
+        <h3 style="margin:0 0 10px 0; color:#cce1f1;">Najbolji W-streak</h3>
+        <div id="streaksW" class="list"></div>
+      </div>
+
+      <!-- ✅ RIGHT: TOP 5 L-STREAK -->
+      <div>
+        <h3 style="margin:0 0 10px 0; color:#cce1f1;">Najbolji L-streak</h3>
+        <div id="streaksL" class="list"></div>
+      </div>
+
     </div>
   </div>
 
@@ -185,10 +189,13 @@ function renderTopForm(players){
 function renderStreaks(players){
   function streakCalc(form){
     let w=0,l=0;
+
+    // W-streak
     for(let r of [...form].reverse()){
       if(r==="W") w++;
       else break;
     }
+    // L-streak
     for(let r of [...form].reverse()){
       if(r==="L") l++;
       else break;
@@ -196,25 +203,49 @@ function renderStreaks(players){
     return { win:w, lose:l };
   }
 
+  // izračun za sve igrače
   const arr = players.map(p=>{
     const s = streakCalc(p.form);
     return { name:p.name, win:s.win, lose:s.lose };
   });
 
-  const top5 = arr.sort((a,b)=> (b.win - a.win) || (b.lose - a.lose)).slice(0,5);
+  // ✅ TOP 5 WIN streak
+  const topW = [...arr]
+      .filter(x => x.win > 0)
+      .sort((a,b)=> b.win - a.win)
+      .slice(0,5);
 
-  const wrap = document.getElementById("streaks");
-  wrap.innerHTML = "";
+  // ✅ TOP 5 LOSE streak
+  const topL = [...arr]
+      .filter(x => x.lose > 0)
+      .sort((a,b)=> b.lose - a.lose)
+      .slice(0,5);
 
-  top5.forEach(p=>{
+  // render
+  const wrapW = document.getElementById("streaksW");
+  const wrapL = document.getElementById("streaksL");
+
+  wrapW.innerHTML = "";
+  wrapL.innerHTML = "";
+
+  topW.forEach(p=>{
     const div = document.createElement("div");
     div.className = "streak-box";
     div.innerHTML = `
       <strong>${p.name}</strong><br>
-      ✅ W-streak: ${p.win}<br>
+      ✅ W-streak: ${p.win}
+    `;
+    wrapW.appendChild(div);
+  });
+
+  topL.forEach(p=>{
+    const div = document.createElement("div");
+    div.className = "streak-box";
+    div.innerHTML = `
+      <strong>${p.name}</strong><br>
       ❌ L-streak: ${p.lose}
     `;
-    wrap.appendChild(div);
+    wrapL.appendChild(div);
   });
 }
 
@@ -294,4 +325,5 @@ function renderWLChart(players){
 
 </body>
 </html>
+
 
