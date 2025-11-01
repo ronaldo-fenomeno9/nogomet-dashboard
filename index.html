@@ -15,7 +15,7 @@
   --win:#22c55e; --draw:#eab308; --loss:#ef4444; --card:#101823; --chip:#1b2633;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto}
 .container{max-width:1200px;margin:0 auto;padding:24px}
 .header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
 .logo{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#38bdf8,#0ea5e9)}
@@ -27,7 +27,7 @@ h1{font-size:20px;margin:0}
   .grid-cols-2{grid-template-columns:repeat(2,1fr)}
 }
 .card{background:var(--panel);border:1px solid #1e2a38;border-radius:14px;padding:16px}
-.card h2{font-size:16px;margin:0 0 12px;color:#cce1f1}
+.card h2{font-size:16px;margin:0 0 12px 0;color:#cce1f1}
 .kpis{display:grid;gap:12px}
 .kpi{background:var(--card);border:1px solid #1e2a38;border-radius:14px;padding:14px}
 .kpi .title{color:var(--muted);font-size:12px;margin-bottom:6px}
@@ -36,12 +36,43 @@ h1{font-size:20px;margin:0}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{padding:10px 8px;border-bottom:1px solid #1f2a36;font-size:14px}
 .table th{color:#9fb4c6;text-align:left;font-weight:600}
+.table td.clickable{cursor:pointer;color:#38bdf8}
+.table td.clickable:hover{text-decoration:underline}
 .form-strip{display:flex;gap:6px}
 .form-dot{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#0b1220}
 .form-dot.win{background:var(--win)}
 .form-dot.draw{background:var(--draw)}
 .form-dot.loss{background:var(--loss)}
 .list{display:flex;flex-direction:column;gap:10px}
+.btn{background:#1a2430;border:1px solid #273447;color:#d6e6f5;border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer}
+.btn:hover{filter:brightness(1.1)}
+
+/* MODAL */
+.modal-bg{
+  position:fixed;left:0;top:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.65);display:none;
+  align-items:center;justify-content:center;z-index:50;
+}
+.modal{
+  background:var(--panel);border-radius:14px;
+  width:90%;max-width:600px;max-height:80vh;overflow-y:auto;
+  padding:20px;border:1px solid #1e2a38;
+}
+.modal h3{margin:0 0 12px 0}
+.close-btn{
+  float:right;color:#aaa;cursor:pointer;font-size:20px;
+}
+.close-btn:hover{color:#fff}
+.match-row{
+  padding:8px 0;border-bottom:1px solid #1f2a36;font-size:14px;
+}
+.match-row span{display:inline-block;margin-right:10px}
+.result-chip{
+  padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220;
+}
+.result-chip.W{background:var(--win)}
+.result-chip.D{background:var(--draw)}
+.result-chip.L{background:var(--loss)}
 </style>
 
 </head>
@@ -60,7 +91,7 @@ h1{font-size:20px;margin:0}
   <!-- KPIs -->
   <div class="grid grid-cols-3 kpis">
     <div class="kpi">
-      <div class="title">Ukupno u blagajni (sezona)</div>
+      <div class="title">Ukupno u blagajni</div>
       <div class="value" id="kpi-kitty">0.00 €</div>
       <div class="small" id="season"></div>
     </div>
@@ -75,7 +106,7 @@ h1{font-size:20px;margin:0}
     </div>
   </div>
 
-  <!-- ✅ 1) GRAFOVI GORE -->
+  <!-- Charts na vrh -->
   <div class="grid grid-cols-2" style="margin-top:16px">
     <div class="card">
       <h2>Dolaznost po igračima (Top 10)</h2>
@@ -87,28 +118,25 @@ h1{font-size:20px;margin:0}
     </div>
   </div>
 
-  <!-- ✅ 2) Najbolja forma -->
+  <!-- Najbolja forma -->
   <div class="card" style="margin-top:16px">
     <h2>Najbolja forma — Top 5</h2>
     <div id="topForm" class="list"></div>
   </div>
 
-  <!-- ✅ 3) Streakovi: dvije kolone -->
-  <div class="card" style="margin-top:16px">
-    <h2>Streakovi — Top 5</h2>
-    <div class="grid grid-cols-2">
-      <div>
-        <h3 style="margin:0 0 8px">W-streak</h3>
-        <div id="ws" class="list"></div>
-      </div>
-      <div>
-        <h3 style="margin:0 0 8px">L-streak</h3>
-        <div id="ls" class="list"></div>
-      </div>
+  <!-- Streakovi -->
+  <div class="grid grid-cols-2" style="margin-top:16px">
+    <div class="card">
+      <h2>W-streak — Top 5</h2>
+      <div id="wStreak" class="list"></div>
+    </div>
+    <div class="card">
+      <h2>L-streak — Top 5</h2>
+      <div id="lStreak" class="list"></div>
     </div>
   </div>
 
-  <!-- ✅ Master tablica -->
+  <!-- Master tablica -->
   <div class="card" style="margin-top:16px">
     <h2>Master tablica</h2>
     <table class="table" id="tblPlayers">
@@ -121,42 +149,50 @@ h1{font-size:20px;margin:0}
     </table>
   </div>
 
-  <!-- ✅ Mjesečni obračuni -->
+  <!-- Mjesečni obračuni -->
   <div class="card" style="margin-top:16px">
     <h2>Mjesečni obračuni</h2>
     <div id="months" class="list"></div>
   </div>
+</div>
 
+<!-- MODAL -->
+<div id="playerModal" class="modal-bg">
+  <div class="modal">
+    <span class="close-btn" onclick="closeModal()">✖</span>
+    <h3 id="modalTitle"></h3>
+    <div id="modalMatches"></div>
+  </div>
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbxOvVJpNioiQ5BAwdry5wRrcLffiVkyXztSYTa4wE8BNQ65lgiI1nt5RzKoDYIRfyVMFw/exec";
+const API = "https://script.google.com/macros/s/AKfycbzf36Ul51QUOqXw8LtIDSrYrq35tDLKExCeULeAv3aISJU8rd4gCldE1y4le8ykRmSrTg/exec";
+
 let DATA = null;
 
 (async function init(){
   const res = await fetch(API);
   DATA = await res.json();
 
-  const now = new Date().getFullYear();
-  document.getElementById('season').textContent = now + " godina";
-
   document.getElementById('updated').textContent =
     "Ažurirano: " + new Date(DATA.generatedAt).toLocaleString("hr-HR");
 
+  document.getElementById('season').textContent = DATA.season + ". godina";
   document.getElementById('kpi-kitty').textContent = euro(DATA.kitty);
+
   document.getElementById('kpi-terms').textContent =
     DATA.seasonTotals.matchesPlayed + "/" + DATA.seasonTotals.fridays;
 
   renderOutcomes(DATA.seasonTotals);
-  renderTopForm(DATA.players);
-  renderStreaks(DATA.players);
   renderAttendanceChart(DATA.players);
   renderWLChart(DATA.players);
+  renderTopForm(DATA.players);
+  renderStreaks(DATA.players);
   renderPlayersTable(DATA.players);
   renderMonths(DATA.months);
 })();
 
-function euro(x){ return (Number(x)||0).toFixed(2)+" €"; }
+function euro(x){ return (Number(x)||0).toFixed(2) + " €"; }
 
 function renderOutcomes(t){
   document.getElementById('kpi-outcomes').innerHTML = `
@@ -166,12 +202,16 @@ function renderOutcomes(t){
   `;
 }
 
-/* ✅ Najbolja forma */
 function renderTopForm(players){
   const scored = players.map(p=>{
-    const score = p.form.reduce((acc,ch)=> acc+(ch==="W"?3:ch==="D"?1:0),0);
+    const score = p.form.reduce((acc,ch)=>{
+      if (ch==="W") return acc+3;
+      if (ch==="D") return acc+1;
+      return acc;
+    },0);
     return { name:p.name, score, form:p.form };
   });
+
   const top5 = scored.sort((a,b)=>b.score-a.score).slice(0,5);
 
   const wrap = document.getElementById("topForm");
@@ -185,63 +225,38 @@ function renderTopForm(players){
   });
 }
 
-/* ✅ Streakovi */
 function renderStreaks(players){
-  function calcStreak(arr, type){
-    let max = 0, curr = 0;
-    for (let i = arr.length - 1; i >= 0; i--){
-      if (arr[i] === type) curr++;
-      else break;
-    }
-    return curr;
-  }
+  const w = [...players].sort((a,b)=>b.winStreak - a.winStreak).slice(0,5);
+  const l = [...players].sort((a,b)=>b.lossStreak - a.lossStreak).slice(0,5);
 
-  const mapped = players.map(p=>({
-    name:p.name,
-    w: calcStreak(p.form,"W"),
-    l: calcStreak(p.form,"L")
-  }));
-
-  const ws = mapped.filter(x=>x.w>0).sort((a,b)=>b.w-a.w).slice(0,5);
-  const ls = mapped.filter(x=>x.l>0).sort((a,b)=>b.l-a.l).slice(0,5);
-
-  const wWrap = document.getElementById("ws");
-  const lWrap = document.getElementById("ls");
-
-  wWrap.innerHTML="";
-  ws.forEach(p=>{
-    const div=document.createElement("div");
+  const wrapW = document.getElementById("wStreak");
+  wrapW.innerHTML = "";
+  w.forEach(p=>{
+    const div = document.createElement("div");
     div.className="badge";
-    div.innerHTML = `✅ W-streak: ${p.w} — ${p.name}`;
-    wWrap.appendChild(div);
+    div.textContent = `${p.name} — ${p.winStreak}`;
+    wrapW.appendChild(div);
   });
 
-  lWrap.innerHTML="";
-  ls.forEach(p=>{
-    const div=document.createElement("div");
+  const wrapL = document.getElementById("lStreak");
+  wrapL.innerHTML = "";
+  l.forEach(p=>{
+    const div = document.createElement("div");
     div.className="badge";
-    div.innerHTML = `❌ L-streak: ${p.l} — ${p.name}`;
-    lWrap.appendChild(div);
+    div.textContent = `${p.name} — ${p.lossStreak}`;
+    wrapL.appendChild(div);
   });
-}
-
-/* ✅ Forme u boji */
-function renderForm(list){
-  return `<div class="form-strip">` +
-    list.map(ch=>{
-      const cls = ch==="W"?"win":(ch==="D"?"draw":"loss");
-      return `<div class="form-dot ${cls}">${ch}</div>`;
-    }).join("") +
-    `</div>`;
 }
 
 function renderPlayersTable(players){
-  const tb=document.querySelector("#tblPlayers tbody");
-  tb.innerHTML="";
+  players = [...players].sort((a,b)=> b.points - a.points);
+  const tb = document.querySelector("#tblPlayers tbody");
+  tb.innerHTML = "";
+
   players.forEach(p=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${p.name}</td>
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="clickable" onclick="openPlayerModal('${p.name}')">${p.name}</td>
       <td>${p.played}</td>
       <td>${p.wins}</td>
       <td>${p.draws}</td>
@@ -255,8 +270,17 @@ function renderPlayersTable(players){
   });
 }
 
+function renderForm(list){
+  return `<div class="form-strip">` +
+    list.map(ch=>{
+      const cls = ch==="W"?"win":(ch==="D"?"draw":"loss");
+      return `<div class="form-dot ${cls}">${ch}</div>`;
+    }).join("") +
+    `</div>`;
+}
+
 function renderMonths(months){
-  const wrap=document.getElementById("months");
+  const wrap = document.getElementById("months");
   wrap.innerHTML="";
   months.forEach(m=>{
     const div=document.createElement("div");
@@ -271,30 +295,49 @@ function renderMonths(months){
   });
 }
 
-function renderAttendanceChart(players){
-  const top = [...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
-  new Chart(document.getElementById("chartAttendance"),{
-    type:"bar",
-    data:{
-      labels:top.map(x=>x.name),
-      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]
-    },
-    options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}
+/* ==========================
+      MODAL — klik na igrača
+   ========================== */
+
+function openPlayerModal(name){
+  const matches = DATA.matches.filter(m => 
+    m.black.includes(name) || m.white.includes(name)
+  ).slice(-20); // zadnjih 20
+
+  document.getElementById("modalTitle").textContent = name + " — zadnjih 20 nastupa";
+
+  const box = document.getElementById("modalMatches");
+  box.innerHTML = "";
+
+  matches.reverse().forEach(m=>{
+    let result = "D";
+    if (m.winner === "crni" && m.black.includes(name)) result = "W";
+    if (m.winner === "bijeli" && m.white.includes(name)) result = "W";
+    if (m.winner === "crni" && m.white.includes(name)) result = "L";
+    if (m.winner === "bijeli" && m.black.includes(name)) result = "L";
+
+    const opponents = 
+      m.black.includes(name) 
+        ? m.white.join(", ") 
+        : m.black.join(", ");
+
+    const row = document.createElement("div");
+    row.className="match-row";
+    row.innerHTML = `
+      <span>${m.date}</span>
+      <span>${m.black.includes(name) ? "Crni" : "Bijeli"}</span>
+      <span>vs ${opponents}</span>
+      <span>${m.score}</span>
+      <span class="result-chip ${result}">${result}</span>
+    `;
+    box.appendChild(row);
   });
+
+  document.getElementById("playerModal").style.display="flex";
 }
 
-function renderWLChart(players){
-  const top=[...players].sort((a,b)=>b.wins-a.wins).slice(0,10);
-  new Chart(document.getElementById("chartWL"),{
-    type:"bar",
-    data:{
-      labels:top.map(x=>x.name),
-      datasets:[
-        {label:"Pobjede",data:top.map(x=>x.wins)},
-        {label:"Porazi",data:top.map(x=>x.losses)}
-      ]
-    }
-  });
+function closeModal(){
+  document.getElementById("playerModal").style.display="none";
 }
 </script>
 
