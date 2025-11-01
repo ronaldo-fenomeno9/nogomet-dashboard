@@ -32,8 +32,7 @@ h1{font-size:20px;margin:0}
 .kpi{background:var(--card);border:1px solid #1e2a38;border-radius:14px;padding:14px}
 .kpi .title{color:var(--muted);font-size:12px;margin-bottom:6px}
 .kpi .value{font-weight:700;font-size:24px}
-.kpi.clickable{cursor:pointer; transition:all .15s ease}
-.kpi.clickable:hover{border-color:#2a3a4d; background:rgba(61,214,255,0.04)}
+.kpi.clickable{cursor:pointer}
 .badge{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:#cfe4f3;border:1px solid #223141;border-radius:999px;padding:4px 10px;font-size:12px}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{padding:10px 8px;border-bottom:1px solid #1f2a36;font-size:14px}
@@ -48,9 +47,6 @@ h1{font-size:20px;margin:0}
 .list{display:flex;flex-direction:column;gap:10px}
 ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .pill{background:var(--card);border:1px solid #1e2a38;border-radius:12px;padding:10px}
-.mono{font-variant-numeric:tabular-nums}
-.player-green{font-weight:700;color:var(--win)}
-.player-ext{color:#9aa7b4}
 
 /* MODALS */
 .modal-bg{
@@ -64,20 +60,20 @@ ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;g
   padding:20px;border:1px solid #1e2a38;
 }
 .modal h3{margin:0 0 12px 0}
-.close-btn{
-  float:right;color:#aaa;cursor:pointer;font-size:20px;
-}
+.close-btn{ float:right;color:#aaa;cursor:pointer;font-size:20px; }
 .close-btn:hover{color:#fff}
 .match-row{
   padding:10px 0;border-bottom:1px solid #1f2a36;font-size:14px;
   display:flex;flex-wrap:wrap;gap:8px;align-items:center;
 }
-.result-chip{
-  padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220;
-}
+.result-chip{ padding:3px 7px;border-radius:6px;font-size:12px;color:#0b1220; }
 .result-chip.W{background:var(--win)}
 .result-chip.D{background:var(--draw)}
 .result-chip.L{background:var(--loss)}
+.player-green{font-weight:700;color:#22c55e}
+.mono{font-variant-numeric:tabular-nums}
+/* Vanjski igrači (neutralno sivo) */
+.external{color:#9aa7b5}
 </style>
 
 </head>
@@ -213,12 +209,10 @@ ul.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;g
 <script>
 const API = "https://script.google.com/macros/s/AKfycbyUkzguVds3DQcg1JozhXZ4Ib-1chXvQT5A5TX8qK5Dwz9Tg40Bz_CqpG3xQBH5AxdbJw/exec";
 let DATA = null;
-let INTERNAL = new Set();
 
 (async function init(){
   const res = await fetch(API);
   DATA = await res.json();
-  INTERNAL = new Set((DATA.players || []).map(p => p.name));
 
   // header
   document.getElementById('updated').textContent =
@@ -235,14 +229,9 @@ let INTERNAL = new Set();
   renderTopForm(DATA.players);
   renderStreaks(DATA.players);
   renderPlayersTable(DATA.players);
-
-  // Duo (samo interni parovi)
-  renderDuos(DATA.matches);
-
-  // Zadnjih 5 termina (svi uključujući vanjske)
-  renderLast5(DATA.matches);
-
   renderMonths(DATA.months);
+  renderDuos(DATA.matches);     // Duo iz exporta
+  renderLast5(DATA.matches);    // Zadnjih 5 termina (s vanjskima)
 })();
 
 function euro(x){ return (Number(x)||0).toFixed(2) + " €"; }
@@ -255,7 +244,7 @@ function renderOutcomes(t){
   `;
 }
 
-/* Najbolja forma (bez bodova) */
+/* Najbolja forma — bez bodova */
 function renderTopForm(players){
   const scored = players.map(p=>{
     const score = p.form.reduce((acc,ch)=> acc+(ch==="W"?3:ch==="D"?1:0),0);
@@ -314,7 +303,7 @@ function renderStreaks(players){
   });
 }
 
-/* Forme u boji (W/D/L točkice) */
+/* Forme u boji */
 function renderForm(list){
   return `<span class="form-strip">` +
     list.map(ch=>{
@@ -345,7 +334,21 @@ function renderPlayersTable(players){
   });
 }
 
-/* Zadnjih 5 termina (sa vanjskima u sivoj) */
+/* Helperi za interne/vanjske */
+const internalSet = new Set();
+function isInternal(name){
+  if (internalSet.size===0 && DATA && Array.isArray(DATA.players)) {
+    DATA.players.forEach(p=>internalSet.add(p.name));
+  }
+  return internalSet.has(name);
+}
+function decorateName(name, highlight){
+  if (name === highlight) return `<span class="player-green">${name}</span>`;
+  if (!isInternal(name))   return `<span class="external">${name}</span>`;
+  return name;
+}
+
+/* Zadnjih 5 termina — s vanjskima (sivo) */
 function renderLast5(matches){
   const wrap = document.getElementById("last5");
   wrap.innerHTML = "";
@@ -363,8 +366,8 @@ function renderLast5(matches){
     el.innerHTML = `
       <div><strong>${m.date}</strong> — Rezultat: <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}</div>
       <div class="small" style="margin-top:6px">
-        <div>Crni: ${formatTeamWithExternals(m.black)}</div>
-        <div>Bijeli: ${formatTeamWithExternals(m.white)}</div>
+        <span>Crni: ${m.black.map(n=>decorateName(n)).join(", ")}</span><br/>
+        <span>Bijeli: ${m.white.map(n=>decorateName(n)).join(", ")}</span>
       </div>
     `;
     wrap.appendChild(el);
@@ -376,11 +379,11 @@ function winnerBadge(w){
   return `<span class="badge">Neriješeno</span>`;
 }
 
-/* Mjeseci (klik) */
+/* Mjesečni obračuni (klik) */
 function renderMonths(months){
   const wrap=document.getElementById("months");
   wrap.innerHTML="";
-  (months||[]).forEach(m=>{
+  months.forEach(m=>{
     const div=document.createElement("div");
     div.className="kpi clickable";
     div.onclick = ()=> openMonthModal(m);
@@ -397,7 +400,6 @@ function renderMonths(months){
 /* ==========================
       MODAL — klik na igrača
    ========================== */
-
 function openPlayerModal(name){
   const all = Array.isArray(DATA.matches) ? DATA.matches : [];
   let matches = all.filter(m => (m.black || []).includes(name) || (m.white || []).includes(name));
@@ -416,7 +418,7 @@ function openPlayerModal(name){
   } else {
     matches.forEach(m=>{
       let result = "D";
-      const onBlack = (m.black || []).includes(name);
+      const onBlack = m.black.includes(name);
       if (m.winner === "crni" && onBlack) result = "W";
       if (m.winner === "bijeli" && !onBlack) result = "W";
       if (m.winner === "crni" && !onBlack) result = "L";
@@ -429,26 +431,15 @@ function openPlayerModal(name){
         <span>Rezultat: <span class="mono">${m.score}</span></span>
         <span class="result-chip ${result}">${result}</span>
         <div style="flex-basis:100%"></div>
-        <div><strong>Ekipa Crni:</strong> ${formatTeamWithHighlight(m.black, name)}</div>
+        <div><strong>Ekipa Crni:</strong> ${m.black.map(p=>decorateName(p, name)).join(", ")}</div>
         <div style="flex-basis:100%"></div>
-        <div><strong>Ekipa Bijeli:</strong> ${formatTeamWithHighlight(m.white, name)}</div>
+        <div><strong>Ekipa Bijeli:</strong> ${m.white.map(p=>decorateName(p, name)).join(", ")}</div>
       `;
       box.appendChild(row);
     });
   }
 
   document.getElementById("playerModal").style.display="flex";
-}
-
-/* Team formatteri */
-function formatTeamWithExternals(arr){
-  return (arr||[]).map(n => INTERNAL.has(n) ? n : `<span class="player-ext">${n}</span>`).join(", ");
-}
-function formatTeamWithHighlight(arr, focus){
-  return (arr||[]).map(n => {
-    if (n === focus) return `<span class="player-green">${n}</span>`;
-    return INTERNAL.has(n) ? n : `<span class="player-ext">${n}</span>`;
-  }).join(", ");
 }
 
 function closeModal(id){
@@ -464,8 +455,7 @@ function openMonthModal(monthObj){
   tb.innerHTML = "";
 
   const rows = Object.values(monthObj.table || {});
-  // Sort po UPLATI (desc) — traženo
-  rows.sort((a,b)=> (b.amount||0) - (a.amount||0));
+  rows.sort((a,b)=> (b.points||0) - (a.points||0)); // po bodovima
 
   rows.forEach(r=>{
     const tr = document.createElement("tr");
@@ -491,6 +481,9 @@ function renderDuos(matches){
   const worstUL = document.getElementById("duoWorst");
   bestUL.innerHTML = ""; worstUL.innerHTML = "";
 
+  // parovi računamo SAMO među internim igračima
+  const isInt = (n)=>isInternal(n);
+
   const pairs = {}; // key -> {a,b,w:0,l:0}
   const addPair = (a,b,field)=>{
     const [x,y] = [a,b].sort();
@@ -500,49 +493,40 @@ function renderDuos(matches){
   };
 
   (matches||[]).forEach(m=>{
-    const countPairs = (team, isTeamWinner)=>{
-      for(let i=0;i<team.length;i++){
-        for(let j=i+1;j<team.length;j++){
-          const a = team[i], b = team[j];
-          // ➜ U duo statistiku ulaze SAMO interni parovi
-          if (INTERNAL.has(a) && INTERNAL.has(b)) {
-            if (isTeamWinner) addPair(a,b,"w");
-            else if (m.winner !== "neriješeno") addPair(a,b,"l");
-          }
+    const makePairs = (team, winnerIsThisTeam)=> {
+      // uzmi SAMO interne
+      const t = (team||[]).filter(isInt);
+      for(let i=0;i<t.length;i++){
+        for(let j=i+1;j<t.length;j++){
+          const a=t[i], b=t[j];
+          if (winnerIsThisTeam) addPair(a,b,"w");
+          else if (m.winner!=="neriješeno") addPair(a,b,"l");
         }
       }
     };
-    const blackWin = m.winner === "crni";
-    const whiteWin = m.winner === "bijeli";
-    countPairs(m.black || [], blackWin);
-    countPairs(m.white || [], whiteWin);
+    makePairs(m.black, m.winner==="crni");
+    makePairs(m.white, m.winner==="bijeli");
   });
 
   const arr = Object.values(pairs);
-  const topBest  = [...arr].sort((a,b)=> (b.w - a.w) || (a.l - b.l)).slice(0,3);
-  const topWorst = [...arr].sort((a,b)=> (b.l - a.l) || (a.w - b.w)).slice(0,3);
+  const topBest  = [...arr].sort((a,b)=> b.w - a.w || a.l - b.l).slice(0,3);
+  const topWorst = [...arr].sort((a,b)=> b.l - a.l || a.w - b.w).slice(0,3);
 
-  // helper za “WWW”/“LLL” u form-dot stilu
-  const dots = (ch, n) => {
-    const cls = ch==="W" ? "win" : "loss";
-    return `<span class="form-strip">` +
-      Array.from({length:n}).map(()=>`<span class="form-dot ${cls}">${ch}</span>`).join("") +
-      `</span>`;
-  };
+  const streakStr = (ch, n)=> Array.from({length:n}, ()=>ch).join("/");
 
   if (topBest.length===0) bestUL.innerHTML = "<li class='small'>Nema podataka.</li>";
   else topBest.forEach(p=>{
     const li = document.createElement("li");
     li.className = "pill";
-    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; ${dots("W", p.w)}`;
+    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; <span class="result-chip W">${streakStr("W", p.w)}</span>`;
     bestUL.appendChild(li);
   });
 
   if (topWorst.length===0) worstUL.innerHTML = "<li class='small'>Nema podataka.</li>";
-  else worstUL.forEach(p=>{
+  else topWorst.forEach(p=>{
     const li = document.createElement("li");
     li.className = "pill";
-    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; ${dots("L", p.l)}`;
+    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; <span class="result-chip L">${streakStr("L", p.l)}</span>`;
     worstUL.appendChild(li);
   });
 }
