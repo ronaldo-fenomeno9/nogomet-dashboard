@@ -524,4 +524,42 @@ function renderDuos(matches){
 
   if (topWorst.length===0) worstUL.innerHTML = "<li class='small'>Nema podataka.</li>";
   else topWorst.forEach(p=>{
-    const li =
+    const li = document.createElement("li");
+    li.className = "pill";
+    li.innerHTML = `<strong>${p.a}</strong> — <strong>${p.b}</strong> &nbsp; <span class="result-chip L">${streakStr("L", p.l)}</span>`;
+    worstUL.appendChild(li);
+  });
+}
+
+/* ==========================
+         CHARTS
+   ========================== */
+function renderAttendanceChart(players){
+  const top = [...players].sort((a,b)=>b.attendancePct-a.attendancePct).slice(0,10);
+  new Chart(document.getElementById("chartAttendance"),{
+    type:"bar",
+    data:{
+      labels:top.map(x=>x.name),
+      datasets:[{label:"Dolaznost %",data:top.map(x=>x.attendancePct)}]
+    },
+    options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}
+  });
+}
+
+function renderWLChart(players){
+  const top=[...players].sort((a,b)=>b.wins-a.wins).slice(0,10);
+  new Chart(document.getElementById("chartWL"),{
+    type:"bar",
+    data:{
+      labels:top.map(x=>x.name),
+      datasets:[
+        {label:"Pobjede",data:top.map(x=>x.wins)},
+        {label:"Porazi",data:top.map(x=>x.losses)}
+      ]
+    }
+  });
+}
+</script>
+
+</body>
+</html>
