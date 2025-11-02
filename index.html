@@ -354,11 +354,12 @@ function decorateName(name, highlight){
   return name;
 }
 
-/* Zadnjih 5 termina — s vanjskima (sivo) */
+/* Zadnjih 5 termina — s vanjskima (rawBlack/rawWhite) */
 function renderLast5(matches){
   const wrap = document.getElementById("last5");
   wrap.innerHTML = "";
 
+  // Zadnjih 5 termina, najnoviji prvi
   const list = [...(matches || [])].slice(-5).reverse();
 
   if (!list.length) {
@@ -368,8 +369,9 @@ function renderLast5(matches){
 
   list.forEach(m => {
 
-    const black = m.black || [];
-    const white = m.white || [];
+    // ✅ koristimo rawBlack/rawWhite → svi igrači iz sheet Rezultati
+    const black = m.rawBlack || [];
+    const white = m.rawWhite || [];
 
     const el = document.createElement("div");
     el.className = "pill";
@@ -586,5 +588,6 @@ function renderWLChart(players){
 
 </body>
 </html>
+
 
 
