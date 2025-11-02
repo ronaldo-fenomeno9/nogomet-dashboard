@@ -354,42 +354,31 @@ function decorateName(name, highlight){
   return name;
 }
 
-/* Zadnjih 5 termina — s vanjskima (rawBlack/rawWhite) */
+/* Zadnjih 5 termina — s vanjskima (sivo) */
 function renderLast5(matches){
   const wrap = document.getElementById("last5");
   wrap.innerHTML = "";
-
-  // Zadnjih 5 termina, najnoviji prvi
-  const list = [...(matches || [])].slice(-5).reverse();
-
-  if (!list.length) {
-    wrap.innerHTML = `<div class="pill">Nema odigranih termina.</div>`;
+  const list = [...(matches||[])].slice(-5).reverse();
+  if (!list.length){
+    const d = document.createElement("div");
+    d.className = "pill";
+    d.textContent = "Nema odigranih termina.";
+    wrap.appendChild(d);
     return;
   }
-
-  list.forEach(m => {
-
-    // ✅ koristimo rawBlack/rawWhite → svi igrači iz sheet Rezultati
-    const black = m.rawBlack || [];
-    const white = m.rawWhite || [];
-
+  list.forEach(m=>{
     const el = document.createElement("div");
     el.className = "pill";
-
     el.innerHTML = `
-      <div><strong>${m.date}</strong> — Rezultat:
-        <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}
-      </div>
+      <div><strong>${m.date}</strong> — Rezultat: <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}</div>
       <div class="small" style="margin-top:6px">
-        <span>Crni: ${black.map(n => decorateName(n)).join(", ")}</span><br/>
-        <span>Bijeli: ${white.map(n => decorateName(n)).join(", ")}</span>
+        <span>Crni: ${m.black.map(n=>decorateName(n)).join(", ")}</span><br/>
+        <span>Bijeli: ${m.white.map(n=>decorateName(n)).join(", ")}</span>
       </div>
     `;
-
     wrap.appendChild(el);
   });
 }
-
 function winnerBadge(w){
   if (w==="crni") return `<span class="badge">Pobijedili: Crni</span>`;
   if (w==="bijeli") return `<span class="badge">Pobijedili: Bijeli</span>`;
@@ -588,6 +577,3 @@ function renderWLChart(players){
 
 </body>
 </html>
-
-
-
