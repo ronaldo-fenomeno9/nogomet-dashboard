@@ -362,36 +362,32 @@ function renderLast5(matches){
   const list = [...(matches || [])].slice(-5).reverse();
 
   if (!list.length) {
-    const d = document.createElement("div");
-    d.className = "pill";
-    d.textContent = "Nema odigranih termina.";
-    wrap.appendChild(d);
+    wrap.innerHTML = `<div class="pill">Nema odigranih termina.</div>`;
     return;
   }
 
   list.forEach(m => {
 
-    // koristimo full rostere (SVE igrače, uključujući vanjske)
-    const blackAll = m.blackAll || [];
-    const whiteAll = m.whiteAll || [];
+    const black = m.black || [];
+    const white = m.white || [];
 
     const el = document.createElement("div");
     el.className = "pill";
 
     el.innerHTML = `
-      <div><strong>${m.date}</strong> — Rezultat: 
+      <div><strong>${m.date}</strong> — Rezultat:
         <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}
       </div>
-
       <div class="small" style="margin-top:6px">
-        <span>Crni: ${blackAll.map(n => decorateName(n)).join(", ")}</span><br/>
-        <span>Bijeli: ${whiteAll.map(n => decorateName(n)).join(", ")}</span>
+        <span>Crni: ${black.map(n => decorateName(n)).join(", ")}</span><br/>
+        <span>Bijeli: ${white.map(n => decorateName(n)).join(", ")}</span>
       </div>
     `;
 
     wrap.appendChild(el);
   });
 }
+
 function winnerBadge(w){
   if (w==="crni") return `<span class="badge">Pobijedili: Crni</span>`;
   if (w==="bijeli") return `<span class="badge">Pobijedili: Bijeli</span>`;
@@ -590,4 +586,5 @@ function renderWLChart(players){
 
 </body>
 </html>
+
 
