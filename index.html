@@ -348,9 +348,19 @@ function isInternal(name){
   }
   return internalSet.has(name);
 }
+
+// Gosti = svi koji nisu u internom setu, ali postoje u listama teamova
+function isGuest(name) {
+  return !isInternal(name);
+}
+
 function decorateName(name, highlight){
-  if (name === highlight) return `<span class="player-green">${name}</span>`;
-  if (!isInternal(name))   return `<span class="external">${name}</span>`;
+  if (name === highlight)
+    return `<span class="player-green">${name}</span>`;
+
+  if (!isInternal(name))
+    return `<span class="external">${name}</span>`;
+
   return name;
 }
 
@@ -372,8 +382,9 @@ function renderLast5(matches){
     el.innerHTML = `
       <div><strong>${m.date}</strong> — Rezultat: <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}</div>
       <div class="small" style="margin-top:6px">
-        <span>Crni: ${m.black.map(n=>decorateName(n)).join(", ")}</span><br/>
-        <span>Bijeli: ${m.white.map(n=>decorateName(n)).join(", ")}</span>
+        <span>Crni: ${m.black.map(p => decorateName(p)).join(", ")}</span><br/>
+        <span>Bijeli: ${m.white.map(p => decorateName(p)).join(", ")}</span>
+
       </div>
     `;
     wrap.appendChild(el);
