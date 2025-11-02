@@ -358,24 +358,37 @@ function decorateName(name, highlight){
 function renderLast5(matches){
   const wrap = document.getElementById("last5");
   wrap.innerHTML = "";
-  const list = [...(matches||[])].slice(-5).reverse();
-  if (!list.length){
+
+  const list = [...(matches || [])].slice(-5).reverse();
+
+  if (!list.length) {
     const d = document.createElement("div");
     d.className = "pill";
     d.textContent = "Nema odigranih termina.";
     wrap.appendChild(d);
     return;
   }
-  list.forEach(m=>{
+
+  list.forEach(m => {
+
+    // koristimo full rostere (SVE igrače, uključujući vanjske)
+    const blackAll = m.blackAll || [];
+    const whiteAll = m.whiteAll || [];
+
     const el = document.createElement("div");
     el.className = "pill";
+
     el.innerHTML = `
-      <div><strong>${m.date}</strong> — Rezultat: <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}</div>
+      <div><strong>${m.date}</strong> — Rezultat: 
+        <span class="mono">${m.score}</span> ${winnerBadge(m.winner)}
+      </div>
+
       <div class="small" style="margin-top:6px">
-        <span>Crni: ${m.black.map(n=>decorateName(n)).join(", ")}</span><br/>
-        <span>Bijeli: ${m.white.map(n=>decorateName(n)).join(", ")}</span>
+        <span>Crni: ${blackAll.map(n => decorateName(n)).join(", ")}</span><br/>
+        <span>Bijeli: ${whiteAll.map(n => decorateName(n)).join(", ")}</span>
       </div>
     `;
+
     wrap.appendChild(el);
   });
 }
@@ -577,3 +590,4 @@ function renderWLChart(players){
 
 </body>
 </html>
+
